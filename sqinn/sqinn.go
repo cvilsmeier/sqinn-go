@@ -90,7 +90,7 @@ type BlobValue struct {
 	Value []byte
 }
 
-type VarValue struct {
+type AnyValue struct {
 	Int    IntValue
 	Int64  Int64Value
 	Double DoubleValue
@@ -98,8 +98,28 @@ type VarValue struct {
 	Blob   BlobValue
 }
 
+func (a AnyValue) AsInt() int {
+	return a.Int.Value
+}
+
+func (a AnyValue) AsInt64() int64 {
+	return a.Int64.Value
+}
+
+func (a AnyValue) AsDouble() float64 {
+	return a.Double.Value
+}
+
+func (a AnyValue) AsString() string {
+	return a.String.Value
+}
+
+func (a AnyValue) AsBlob() []byte {
+	return a.Blob.Value
+}
+
 type Row struct {
-	Values []VarValue
+	Values []AnyValue
 }
 
 // marshalling
@@ -186,6 +206,11 @@ func decodeBool(buf []byte) (bool, []byte) {
 	return v, buf
 }
 
+type Options struct {
+	SqinnPath string
+	Logger    Logger
+}
+
 type Sqinn struct {
 	mx   sync.Mutex
 	cmd  *exec.Cmd
@@ -194,7 +219,11 @@ type Sqinn struct {
 	serr io.ReadCloser
 }
 
-func NewSqinn(sqinnPath string, logger Logger) (*Sqinn, error) {
+func New(options Options) (*Sqinn, error) {
+	sqinnPath := options.SqinnPath
+	if sqinnPath == "" {
+		sqinnPath = "sqinn"
+	}
 	cmd := exec.Command(sqinnPath)
 	sin, err := cmd.StdinPipe()
 	if err != nil {
@@ -219,6 +248,10 @@ func NewSqinn(sqinnPath string, logger Logger) (*Sqinn, error) {
 		return nil, err
 	}
 	sq := &Sqinn{sync.Mutex{}, cmd, sin, sout, serr}
+	logger := options.Logger
+	if logger == nil {
+		logger = NoLogger{}
+	}
 	go sq.run(logger)
 	return sq, nil
 }
@@ -495,30 +528,42 @@ func (sq *Sqinn) Close() error {
 	return err
 }
 
-func (sq *Sqinn) Exec(sql string, nrows, nparams int, values []interface{}) error {
-	if nrows < 1 {
-		return fmt.Errorf("Exec '%s' nrows must be >= 1 but was %d", sql, nrows)
+func (sq *Sqinn) ExecOne(sql string) (int, error) {
+	changes, err := sq.Exec(sql, 1, 0, nil)
+	if err != nil {
+		return 0, err
 	}
-	if len(values) != nrows*nparams {
-		return fmt.Errorf("Exec '%s' expected %d values but have %d", sql, nrows*nparams, len(values))
+	return changes[0], nil
+}
+
+func (sq *Sqinn) Exec(sql string, niterations, nparams int, values []interface{}) ([]int, error) {
+	if niterations < 0 {
+		return nil, fmt.Errorf("Exec '%s' niterations must be >= 0 but was %d", sql, niterations)
+	}
+	if len(values) != niterations*nparams {
+		return nil, fmt.Errorf("Exec '%s' expected %d values but have %d", sql, niterations*nparams, len(values))
 	}
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
 	req := make([]byte, 0, 10+len(sql))
 	req = append(req, FC_EXEC)
 	req = append(req, encodeString(sql)...)
-	req = append(req, encodeInt32(nrows)...)
+	req = append(req, encodeInt32(niterations)...)
 	req = append(req, encodeInt32(nparams)...)
 	var err error
 	req, err = sq.bindValues(req, values)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	_, err = sq.writeAndRead(req)
+	resp, err := sq.writeAndRead(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	changes := make([]int, niterations)
+	for i := 0; i < niterations; i++ {
+		changes[i], resp = decodeInt32(resp)
+	}
+	return changes, nil
 }
 
 func (sq *Sqinn) Query(sql string, values []interface{}, colTypes []byte) ([]Row, error) {
@@ -543,30 +588,30 @@ func (sq *Sqinn) Query(sql string, values []interface{}, colTypes []byte) ([]Row
 	rows := make([]Row, 0, nrows)
 	for i := 0; i < nrows; i++ {
 		var row Row
-		row.Values = make([]VarValue, 0, ncols)
+		row.Values = make([]AnyValue, 0, ncols)
 		for icol := 0; icol < ncols; icol++ {
-			var val VarValue
+			var any AnyValue
 			var set bool
 			set, resp = decodeBool(resp)
 			if set {
 				switch colTypes[icol] {
 				case VAL_INT:
-					val.Int.Set = true
-					val.Int.Value, resp = decodeInt32(resp)
+					any.Int.Set = true
+					any.Int.Value, resp = decodeInt32(resp)
 				case VAL_DOUBLE:
-					val.Double.Set = true
-					val.Double.Value, resp = decodeDouble(resp)
+					any.Double.Set = true
+					any.Double.Value, resp = decodeDouble(resp)
 				case VAL_TEXT:
-					val.String.Set = true
-					val.String.Value, resp = decodeString(resp)
+					any.String.Set = true
+					any.String.Value, resp = decodeString(resp)
 				case VAL_BLOB:
-					val.Blob.Set = true
-					val.Blob.Value, resp = decodeBlob(resp)
+					any.Blob.Set = true
+					any.Blob.Value, resp = decodeBlob(resp)
 				default:
 					return nil, fmt.Errorf("invalid col type %d", colTypes[icol])
 				}
 			}
-			row.Values = append(row.Values, val)
+			row.Values = append(row.Values, any)
 		}
 		rows = append(rows, row)
 	}

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/cvilsmeier/sqinn-go/sqinn"
@@ -26,22 +27,19 @@ func testFunctions(sqinnPath, dbFile string, nusers int) {
 			log.Fatal(err)
 		}
 	}
-	sq, err := sqinn.NewSqinn(sqinnPath, sqinn.StdLogger{})
+	// make sure db does not exist
+	os.Remove(dbFile)
+	// launch sqinn
+	sq, err := sqinn.New(sqinn.Options{
+		SqinnPath: sqinnPath,
+	})
 	check(err)
 	// open db
 	err = sq.Open(dbFile)
 	check(err)
 	t1 := time.Now()
 	// prepare schema
-	sql := "DROP TABLE IF EXISTS users"
-	err = sq.Prepare(sql)
-	check(err)
-	more, err := sq.Step()
-	check(err)
-	assert(!more)
-	err = sq.Finalize()
-	check(err)
-	sql = "CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR, age INTEGER, rating REAL)"
+	sql := "CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR, age INTEGER, rating REAL)"
 	err = sq.Prepare(sql)
 	check(err)
 	_, err = sq.Step()
@@ -89,6 +87,7 @@ func testFunctions(sqinnPath, dbFile string, nusers int) {
 	sql = "SELECT id, name, age, rating FROM users ORDER BY id"
 	err = sq.Prepare(sql)
 	check(err)
+	var more bool
 	more, err = sq.Step()
 	check(err)
 	var nrows int
@@ -131,17 +130,21 @@ func testUsers(sqinnPath, dbFile string, nusers int, bindRating bool) {
 			log.Fatal(err)
 		}
 	}
-	sq, err := sqinn.NewSqinn(sqinnPath, sqinn.StdLogger{})
+	// make sure db doesn't exist
+	os.Remove(dbFile)
+	// launch sqinn
+	sq, err := sqinn.New(sqinn.Options{
+		SqinnPath: sqinnPath,
+	})
 	check(err)
 	// open db
 	err = sq.Open(dbFile)
 	check(err)
 	// prepare schema
-	err = sq.Exec("DROP TABLE IF EXISTS users", 1, 0, nil)
-	err = sq.Exec("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR, age INTEGER, rating REAL)", 1, 0, nil)
+	_, err = sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR, age INTEGER, rating REAL)")
 	// insert users
 	t1 := time.Now()
-	err = sq.Exec("BEGIN TRANSACTION", 1, 0, nil)
+	_, err = sq.Exec("BEGIN TRANSACTION", 1, 0, nil)
 	values := make([]interface{}, 0, nusers*4)
 	for i := 0; i < nusers; i++ {
 		id := i + 1
@@ -154,8 +157,8 @@ func testUsers(sqinnPath, dbFile string, nusers int, bindRating bool) {
 			values = append(values, id, name, age, nil)
 		}
 	}
-	err = sq.Exec("INSERT INTO users (id, name, age, rating) VALUES (?,?,?,?)", nusers, 4, values)
-	err = sq.Exec("COMMIT", 1, 0, nil)
+	_, err = sq.Exec("INSERT INTO users (id, name, age, rating) VALUES (?,?,?,?)", nusers, 4, values)
+	_, err = sq.ExecOne("COMMIT")
 	t2 := time.Now()
 	// query users
 	colTypes := []byte{sqinn.VAL_INT, sqinn.VAL_TEXT, sqinn.VAL_INT, sqinn.VAL_DOUBLE}
@@ -191,28 +194,48 @@ func testComplex(sqinnPath, dbFile string, nprofiles, nusers, nlocations int) {
 			log.Fatal(err)
 		}
 	}
-	sq, err := sqinn.NewSqinn(sqinnPath, sqinn.StdLogger{})
+	sq, err := sqinn.New(sqinn.Options{
+		SqinnPath: sqinnPath,
+	})
 	check(err)
+	// make sure db doesn't exist
+	os.Remove(dbFile)
 	// open db
 	check(sq.Open(dbFile))
-	check(sq.Exec("PRAGMA foreign_keys=1", 1, 0, nil))
-	check(sq.Exec("DROP TABLE IF EXISTS locations", 1, 0, nil))
-	check(sq.Exec("DROP TABLE IF EXISTS users", 1, 0, nil))
-	check(sq.Exec("DROP TABLE IF EXISTS profiles", 1, 0, nil))
-	check(sq.Exec("CREATE TABLE profiles (id VARCHAR PRIMARY KEY NOT NULL, name VARCHAR NOT NULL, active BOOL NOT NULL)", 1, 0, nil))
-	check(sq.Exec("CREATE INDEX idx_profiles_name ON profiles(name);", 1, 0, nil))
-	check(sq.Exec("CREATE INDEX idx_profiles_active ON profiles(active);", 1, 0, nil))
-	check(sq.Exec("CREATE TABLE users (id VARCHAR PRIMARY KEY NOT NULL, profileId VARCHAR NOT NULL, name VARCHAR NOT NULL, active BOOL NOT NULL, FOREIGN KEY (profileId) REFERENCES profiles(id))", 1, 0, nil))
-	check(sq.Exec("CREATE INDEX idx_users_profileId ON users(profileId);", 1, 0, nil))
-	check(sq.Exec("CREATE INDEX idx_users_name ON users(name);", 1, 0, nil))
-	check(sq.Exec("CREATE INDEX idx_users_active ON users(active);", 1, 0, nil))
-	check(sq.Exec("CREATE TABLE locations (id VARCHAR PRIMARY KEY NOT NULL, userId VARCHAR NOT NULL, name VARCHAR NOT NULL, active BOOL NOT NULL, FOREIGN KEY (userId) REFERENCES users(id))", 1, 0, nil))
-	check(sq.Exec("CREATE INDEX idx_locations_userId ON locations(userId);", 1, 0, nil))
-	check(sq.Exec("CREATE INDEX idx_locations_name ON locations(name);", 1, 0, nil))
-	check(sq.Exec("CREATE INDEX idx_locations_active ON locations(active);", 1, 0, nil))
+	_, err = sq.ExecOne("PRAGMA foreign_keys=1")
+	check(err)
+	_, err = sq.ExecOne("DROP TABLE IF EXISTS locations")
+	check(err)
+	_, err = sq.ExecOne("DROP TABLE IF EXISTS users")
+	check(err)
+	_, err = sq.ExecOne("DROP TABLE IF EXISTS profiles")
+	check(err)
+	_, err = sq.ExecOne("CREATE TABLE profiles (id VARCHAR PRIMARY KEY NOT NULL, name VARCHAR NOT NULL, active BOOL NOT NULL)")
+	check(err)
+	_, err = sq.ExecOne("CREATE INDEX idx_profiles_name ON profiles(name);")
+	check(err)
+	_, err = sq.ExecOne("CREATE INDEX idx_profiles_active ON profiles(active);")
+	check(err)
+	_, err = sq.ExecOne("CREATE TABLE users (id VARCHAR PRIMARY KEY NOT NULL, profileId VARCHAR NOT NULL, name VARCHAR NOT NULL, active BOOL NOT NULL, FOREIGN KEY (profileId) REFERENCES profiles(id))")
+	check(err)
+	_, err = sq.ExecOne("CREATE INDEX idx_users_profileId ON users(profileId);")
+	check(err)
+	_, err = sq.ExecOne("CREATE INDEX idx_users_name ON users(name);")
+	check(err)
+	_, err = sq.ExecOne("CREATE INDEX idx_users_active ON users(active);")
+	check(err)
+	_, err = sq.ExecOne("CREATE TABLE locations (id VARCHAR PRIMARY KEY NOT NULL, userId VARCHAR NOT NULL, name VARCHAR NOT NULL, active BOOL NOT NULL, FOREIGN KEY (userId) REFERENCES users(id))")
+	check(err)
+	_, err = sq.ExecOne("CREATE INDEX idx_locations_userId ON locations(userId);")
+	check(err)
+	_, err = sq.ExecOne("CREATE INDEX idx_locations_name ON locations(name);")
+	check(err)
+	_, err = sq.ExecOne("CREATE INDEX idx_locations_active ON locations(active);")
+	check(err)
 	// insert
 	t1 := time.Now()
-	check(sq.Exec("BEGIN TRANSACTION", 1, 0, nil))
+	_, err = sq.ExecOne("BEGIN TRANSACTION")
+	check(err)
 	values := make([]interface{}, 0, nprofiles*3)
 	for p := 0; p < nprofiles; p++ {
 		profileId := fmt.Sprintf("profile_%d", p)
@@ -220,9 +243,12 @@ func testComplex(sqinnPath, dbFile string, nprofiles, nusers, nlocations int) {
 		active := p % 2
 		values = append(values, profileId, name, active)
 	}
-	check(sq.Exec("INSERT INTO profiles (id,name,active) VALUES(?,?,?)", nprofiles, 3, values))
-	check(sq.Exec("COMMIT", 1, 0, nil))
-	check(sq.Exec("BEGIN TRANSACTION", 1, 0, nil))
+	_, err = sq.Exec("INSERT INTO profiles (id,name,active) VALUES(?,?,?)", nprofiles, 3, values)
+	check(err)
+	_, err = sq.ExecOne("COMMIT")
+	check(err)
+	_, err = sq.ExecOne("BEGIN TRANSACTION")
+	check(err)
 	values = make([]interface{}, 0, nprofiles*nusers*4)
 	for p := 0; p < nprofiles; p++ {
 		profileId := fmt.Sprintf("profile_%d", p)
@@ -233,9 +259,12 @@ func testComplex(sqinnPath, dbFile string, nprofiles, nusers, nlocations int) {
 			values = append(values, userId, profileId, name, active)
 		}
 	}
-	check(sq.Exec("INSERT INTO users (id,profileId,name,active) VALUES(?,?,?,?)", nprofiles*nusers, 4, values))
-	check(sq.Exec("COMMIT", 1, 0, nil))
-	check(sq.Exec("BEGIN TRANSACTION", 1, 0, nil))
+	_, err = sq.Exec("INSERT INTO users (id,profileId,name,active) VALUES(?,?,?,?)", nprofiles*nusers, 4, values)
+	check(err)
+	_, err = sq.ExecOne("COMMIT")
+	check(err)
+	_, err = sq.ExecOne("BEGIN TRANSACTION")
+	check(err)
 	values = make([]interface{}, 0, nprofiles*nusers*nlocations*4)
 	for p := 0; p < nprofiles; p++ {
 		for u := 0; u < nusers; u++ {
@@ -248,8 +277,10 @@ func testComplex(sqinnPath, dbFile string, nprofiles, nusers, nlocations int) {
 			}
 		}
 	}
-	check(sq.Exec("INSERT INTO locations (id,userId,name,active) VALUES(?,?,?,?)", nprofiles*nusers*nlocations, 4, values))
-	check(sq.Exec("COMMIT", 1, 0, nil))
+	_, err = sq.Exec("INSERT INTO locations (id,userId,name,active) VALUES(?,?,?,?)", nprofiles*nusers*nlocations, 4, values)
+	check(err)
+	_, err = sq.Exec("COMMIT", 1, 0, nil)
+	check(err)
 	t2 := time.Now()
 	// query
 	sql := "SELECT locations.id, locations.userId, locations.name, locations.active, users.id, users.profileId, users.name, users.active, profiles.id, profiles.name, profiles.active " +
@@ -280,14 +311,16 @@ func testBlob(sqinnPath, dbFile string) {
 			// log.Fatalf(format, v...)
 		}
 	}
-	sq, err := sqinn.NewSqinn(sqinnPath, sqinn.StdLogger{})
+	sq, err := sqinn.New(sqinn.Options{
+		SqinnPath: sqinnPath,
+	})
 	assert(err == nil, "%s", err)
 	// open db
 	err = sq.Open(dbFile)
 	assert(err == nil, "%s", err)
-	err = sq.Exec("DROP TABLE IF EXISTS users", 1, 0, nil)
+	_, err = sq.ExecOne("DROP TABLE IF EXISTS users")
 	assert(err == nil, "%s", err)
-	err = sq.Exec("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, image BLOB)", 1, 0, nil)
+	_, err = sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, image BLOB)")
 	assert(err == nil, "%s", err)
 	// insert
 	id := 1
@@ -296,7 +329,7 @@ func testBlob(sqinnPath, dbFile string) {
 		image[i] = byte(i)
 	}
 	values := []interface{}{id, image}
-	err = sq.Exec("INSERT INTO users (id,image) VALUES(?,?)", 1, 2, values)
+	_, err = sq.Exec("INSERT INTO users (id,image) VALUES(?,?)", 1, 2, values)
 	assert(err == nil, "%s", err)
 	// query
 	sql := "SELECT id, image FROM users ORDER BY id"
@@ -328,6 +361,7 @@ func main() {
 			return
 		} else if arg == "bench" {
 			testFunctions(sqinnPath, dbFile, 10*1000)
+			testUsers(sqinnPath, dbFile, 1000*1000, false)
 			testUsers(sqinnPath, dbFile, 1000*1000, true)
 			testComplex(sqinnPath, dbFile, 100, 100, 10)
 			return
