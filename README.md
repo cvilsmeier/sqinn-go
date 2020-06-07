@@ -61,21 +61,43 @@ func main() {
 ```
 
 
+Usage
+------------------------------------------------------------------------------
+
+Sqinn must be installed on your system. The easiest way is to download a
+pre-built executable from <https://github.com/cvilsmeier/sqinn/releases> and
+put it somewhere on your `$PATH`, or `%PATH%` on Windows.
+
+If you want to store the Sqinn binary in a non-path folder, you can do that.
+But then you must specify it when opening a Sqinn connection:
+
+```go
+
+	sq, err := sqinn.New(sqinn.Options{
+        SqinnPath: "/path/to/sqinn",
+    })
+
+```
+
+If do not want to use a pre-built binary, you can compile Sqinn yourself. See
+<https://github.com/cvilsmeier/sqinn> for instructions.
+
+
 Discussion
 ------------------------------------------------------------------------------
 
 ### Advantages
 
-- Better performance when used non-concurrently, see
-  [performance.md](performance.md)
+- No need to have gcc installed on development machine.
+
+- Golang bult-in cross compilation works.
 
 - Faster build speed (1s vs 3s).
 
 - Smaller binary size (2MB vs 10MB).
 
-- No need to have gcc installed on development machine.
-
-- Cross compilation works.
+- Better performance when used non-concurrently, see
+  [performance.md](performance.md)
 
 
 ### Disadvantages
