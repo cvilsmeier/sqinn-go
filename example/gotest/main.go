@@ -15,7 +15,7 @@ import (
 func testFunctions(sqinnPath, dbFile string, nusers int) {
 	funcname := "testFunctions"
 	log.Printf("TEST %s", funcname)
-	log.Printf("nusers=%d", nusers)
+	log.Printf("sqinnPath=%s, dbFile=%s, nusers=%d", sqinnPath, dbFile, nusers)
 	assert := func(c bool) {
 		if !c {
 			panic("assertion failed")
@@ -125,7 +125,7 @@ func testFunctions(sqinnPath, dbFile string, nusers int) {
 func testUsers(sqinnPath, dbFile string, nusers int, bindRating bool) {
 	funcname := "testUsers"
 	log.Printf("TEST %s", funcname)
-	log.Printf("nusers=%d, bindRating=%t", nusers, bindRating)
+	log.Printf("sqinnPath=%s, dbFile=%s, nusers=%d, bindRating=%t", sqinnPath, dbFile, nusers, bindRating)
 	check := func(err error) {
 		if err != nil {
 			log.Fatal(err)
@@ -185,7 +185,7 @@ func testUsers(sqinnPath, dbFile string, nusers int, bindRating bool) {
 func testComplex(sqinnPath, dbFile string, nprofiles, nusers, nlocations int) {
 	funcname := "testComplex"
 	log.Printf("TEST %s", funcname)
-	log.Printf("nprofiles, nusers, nlocations = %d, %d, %d", nprofiles, nusers, nlocations)
+	log.Printf("sqinnPath=%s, dbFile=%s, nprofiles, nusers, nlocations = %d, %d, %d", sqinnPath, dbFile, nprofiles, nusers, nlocations)
 	check := func(err error) {
 		if err != nil {
 			log.Fatal(err)
@@ -273,6 +273,7 @@ func testComplex(sqinnPath, dbFile string, nprofiles, nusers, nlocations int) {
 func testBlob(sqinnPath, dbFile string) {
 	funcname := "testBlob"
 	log.Printf("TEST %s", funcname)
+	log.Printf("sqinnPath=%s, dbFile=%s", sqinnPath, dbFile)
 	assert := func(c bool, format string, v ...interface{}) {
 		if !c {
 			panic(fmt.Errorf(format, v...))
@@ -327,7 +328,7 @@ func main() {
 			return
 		} else if arg == "bench" {
 			testFunctions(sqinnPath, dbFile, 10*1000)
-			testUsers(sqinnPath, dbFile, 1000*1000, false)
+			testUsers(sqinnPath, dbFile, 1000*1000, true)
 			testComplex(sqinnPath, dbFile, 100, 100, 10)
 			return
 		}
