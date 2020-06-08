@@ -97,7 +97,7 @@ Discussion
 - Smaller binary size (2MB vs 10MB for sample program).
 
 - Better performance when used non-concurrently, see
-  <performance.md>
+  [performance.md](performance.md)
 
 
 ### Disadvantages
