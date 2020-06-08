@@ -92,12 +92,12 @@ Discussion
 
 - Golang bult-in cross compilation works.
 
-- Faster build speed (1s vs 3s).
+- Faster build speed (1s vs 3s for sample program).
 
-- Smaller binary size (2MB vs 10MB).
+- Smaller binary size (2MB vs 10MB for sample program).
 
 - Better performance when used non-concurrently, see
-  [performance.md](performance.md)
+  <performance.md>
 
 
 ### Disadvantages
