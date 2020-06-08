@@ -1,3 +1,6 @@
+/*
+A benchmark for sqinn-go.
+*/
 package main
 
 import (
@@ -9,9 +12,6 @@ import (
 
 	"github.com/cvilsmeier/sqinn-go/sqinn"
 )
-
-// var SqinnPath = "sqinn"
-// var DbFilename = "test.db"
 
 func testFunctions(sqinnPath, dbFile string, nusers int) {
 	funcname := "testFunctions"
@@ -93,13 +93,13 @@ func testFunctions(sqinnPath, dbFile string, nusers int) {
 	var nrows int
 	for more {
 		nrows++
-		idValue, err := sq.ColumnInt(0)
+		idValue, err := sq.Column(0, sqinn.ValInt)
 		check(err)
-		nameValue, err := sq.ColumnText(1)
+		nameValue, err := sq.Column(1, sqinn.ValText)
 		check(err)
-		ageValue, err := sq.ColumnInt(2)
+		ageValue, err := sq.Column(2, sqinn.ValInt)
 		check(err)
-		ratingValue, err := sq.ColumnDouble(3)
+		ratingValue, err := sq.Column(3, sqinn.ValDouble)
 		check(err)
 		_, _, _, _ = idValue, nameValue, ageValue, ratingValue
 		// log.Printf("%d | %s | %d | %g", idValue.Value, nameValue.Value, ageValue.Value, ratingValue.Value)
@@ -161,7 +161,7 @@ func testUsers(sqinnPath, dbFile string, nusers int, bindRating bool) {
 	_, err = sq.ExecOne("COMMIT")
 	t2 := time.Now()
 	// query users
-	colTypes := []byte{sqinn.VAL_INT, sqinn.VAL_TEXT, sqinn.VAL_INT, sqinn.VAL_DOUBLE}
+	colTypes := []byte{sqinn.ValInt, sqinn.ValText, sqinn.ValInt, sqinn.ValDouble}
 	rows, err := sq.Query("SELECT id, name, age, rating FROM users ORDER BY id", nil, colTypes)
 	check(err)
 	log.Printf("fetched %d rows", len(rows))
@@ -238,10 +238,10 @@ func testComplex(sqinnPath, dbFile string, nprofiles, nusers, nlocations int) {
 	check(err)
 	values := make([]interface{}, 0, nprofiles*3)
 	for p := 0; p < nprofiles; p++ {
-		profileId := fmt.Sprintf("profile_%d", p)
+		profileID := fmt.Sprintf("profile_%d", p)
 		name := fmt.Sprintf("ProfileGo %d", p)
 		active := p % 2
-		values = append(values, profileId, name, active)
+		values = append(values, profileID, name, active)
 	}
 	_, err = sq.Exec("INSERT INTO profiles (id,name,active) VALUES(?,?,?)", nprofiles, 3, values)
 	check(err)
@@ -251,12 +251,12 @@ func testComplex(sqinnPath, dbFile string, nprofiles, nusers, nlocations int) {
 	check(err)
 	values = make([]interface{}, 0, nprofiles*nusers*4)
 	for p := 0; p < nprofiles; p++ {
-		profileId := fmt.Sprintf("profile_%d", p)
+		profileID := fmt.Sprintf("profile_%d", p)
 		for u := 0; u < nusers; u++ {
-			userId := fmt.Sprintf("user_%d_%d", p, u)
+			userID := fmt.Sprintf("user_%d_%d", p, u)
 			name := fmt.Sprintf("User %d %d", p, u)
 			active := u % 2
-			values = append(values, userId, profileId, name, active)
+			values = append(values, userID, profileID, name, active)
 		}
 	}
 	_, err = sq.Exec("INSERT INTO users (id,profileId,name,active) VALUES(?,?,?,?)", nprofiles*nusers, 4, values)
@@ -268,12 +268,12 @@ func testComplex(sqinnPath, dbFile string, nprofiles, nusers, nlocations int) {
 	values = make([]interface{}, 0, nprofiles*nusers*nlocations*4)
 	for p := 0; p < nprofiles; p++ {
 		for u := 0; u < nusers; u++ {
-			userId := fmt.Sprintf("user_%d_%d", p, u)
+			userID := fmt.Sprintf("user_%d_%d", p, u)
 			for l := 0; l < nlocations; l++ {
-				locationId := fmt.Sprintf("location_%d_%d_%d", p, u, l)
+				locationID := fmt.Sprintf("location_%d_%d_%d", p, u, l)
 				name := fmt.Sprintf("Location %d %d %d", p, u, l)
 				active := l % 2
-				values = append(values, locationId, userId, name, active)
+				values = append(values, locationID, userID, name, active)
 			}
 		}
 	}
@@ -289,7 +289,7 @@ func testComplex(sqinnPath, dbFile string, nprofiles, nusers, nlocations int) {
 		"LEFT JOIN profiles ON profiles.id = users.profileId " +
 		"WHERE locations.active = ? OR locations.active = ? " +
 		"ORDER BY locations.name, locations.id, users.name, users.id, profiles.name, profiles.id"
-	rows, err := sq.Query(sql, []interface{}{0, 1}, []byte{sqinn.VAL_TEXT, sqinn.VAL_TEXT, sqinn.VAL_TEXT, sqinn.VAL_INT, sqinn.VAL_TEXT, sqinn.VAL_TEXT, sqinn.VAL_TEXT, sqinn.VAL_INT, sqinn.VAL_TEXT, sqinn.VAL_TEXT, sqinn.VAL_INT})
+	rows, err := sq.Query(sql, []interface{}{0, 1}, []byte{sqinn.ValText, sqinn.ValText, sqinn.ValText, sqinn.ValInt, sqinn.ValText, sqinn.ValText, sqinn.ValText, sqinn.ValInt, sqinn.ValText, sqinn.ValText, sqinn.ValInt})
 	check(err)
 	log.Printf("fetched %d rows", len(rows))
 	t3 := time.Now()
@@ -333,7 +333,7 @@ func testBlob(sqinnPath, dbFile string) {
 	assert(err == nil, "%s", err)
 	// query
 	sql := "SELECT id, image FROM users ORDER BY id"
-	rows, err := sq.Query(sql, nil, []byte{sqinn.VAL_INT, sqinn.VAL_BLOB})
+	rows, err := sq.Query(sql, nil, []byte{sqinn.ValInt, sqinn.ValBlob})
 	assert(err == nil, "%s", err)
 	assert(len(rows) == 1, "wrong rows %d", len(rows))
 	// close and terminate

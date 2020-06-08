@@ -73,7 +73,7 @@ But then you must specify it when opening a Sqinn connection:
 
 ```go
 
-	sq, err := sqinn.New(sqinn.Options{
+    sq, _ := sqinn.New(sqinn.Options{
         SqinnPath: "/path/to/sqinn",
     })
 

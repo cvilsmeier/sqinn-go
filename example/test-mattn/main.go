@@ -1,3 +1,6 @@
+/*
+A benchmark for http://github.com/mattn/go-sqlite3.
+*/
 package main
 
 import (
@@ -7,7 +10,6 @@ import (
 	"log"
 	"os"
 	"time"
-
 	// please remove comment to enable go-sqlite3 benchmark
 	// _ "github.com/mattn/go-sqlite3"
 )
@@ -111,10 +113,10 @@ func testComplex(dbFile string, nprofiles, nusers, nlocations int) {
 	check(err)
 	stmt, err := tx.Prepare("INSERT INTO profiles (id,name,active) VALUES(?,?,?)")
 	for p := 0; p < nprofiles; p++ {
-		profileId := fmt.Sprintf("profile_%d", p)
+		profileID := fmt.Sprintf("profile_%d", p)
 		name := fmt.Sprintf("ProfileGo %d", p)
 		active := p % 2
-		_, err = stmt.Exec(profileId, name, active)
+		_, err = stmt.Exec(profileID, name, active)
 		check(err)
 	}
 	err = stmt.Close()
@@ -126,12 +128,12 @@ func testComplex(dbFile string, nprofiles, nusers, nlocations int) {
 	check(err)
 	stmt, err = tx.Prepare("INSERT INTO users (id,profileId,name,active) VALUES(?,?,?,?)")
 	for p := 0; p < nprofiles; p++ {
-		profileId := fmt.Sprintf("profile_%d", p)
+		profileID := fmt.Sprintf("profile_%d", p)
 		for u := 0; u < nusers; u++ {
-			userId := fmt.Sprintf("user_%d_%d", p, u)
+			userID := fmt.Sprintf("user_%d_%d", p, u)
 			name := fmt.Sprintf("User %d %d", p, u)
 			active := u % 2
-			_, err = stmt.Exec(userId, profileId, name, active)
+			_, err = stmt.Exec(userID, profileID, name, active)
 			check(err)
 		}
 	}
@@ -145,12 +147,12 @@ func testComplex(dbFile string, nprofiles, nusers, nlocations int) {
 	stmt, err = tx.Prepare("INSERT INTO locations (id,userId,name,active) VALUES(?,?,?,?)")
 	for p := 0; p < nprofiles; p++ {
 		for u := 0; u < nusers; u++ {
-			userId := fmt.Sprintf("user_%d_%d", p, u)
+			userID := fmt.Sprintf("user_%d_%d", p, u)
 			for l := 0; l < nlocations; l++ {
-				locationId := fmt.Sprintf("location_%d_%d_%d", p, u, l)
+				locationID := fmt.Sprintf("location_%d_%d_%d", p, u, l)
 				name := fmt.Sprintf("Location %d %d %d", p, u, l)
 				active := l % 2
-				_, err = stmt.Exec(locationId, userId, name, active)
+				_, err = stmt.Exec(locationID, userID, name, active)
 				check(err)
 			}
 		}
@@ -170,29 +172,29 @@ func testComplex(dbFile string, nprofiles, nusers, nlocations int) {
 	rows, err := db.Query(query, 0, 1)
 	check(err)
 	nrows := 0
-	var locationId sql.NullInt32
-	var locationUserId sql.NullInt32
+	var locationID sql.NullInt32
+	var locationUserID sql.NullInt32
 	var locationName sql.NullString
 	var locationActive sql.NullBool
-	var userId sql.NullInt32
-	var userProfileId sql.NullInt32
+	var userID sql.NullInt32
+	var userProfileID sql.NullInt32
 	var userName sql.NullString
 	var userActive sql.NullBool
-	var profileId sql.NullInt32
+	var profileID sql.NullInt32
 	var profileName sql.NullString
 	var profileActive sql.NullBool
 	for rows.Next() {
 		nrows++
 		rows.Scan(
-			&locationId,
-			&locationUserId,
+			&locationID,
+			&locationUserID,
 			&locationName,
 			&locationActive,
-			&userId,
-			&userProfileId,
+			&userID,
+			&userProfileID,
 			&userName,
 			&userActive,
-			&profileId,
+			&profileID,
 			&profileName,
 			&profileActive,
 		)
