@@ -24,6 +24,16 @@ func TestOpenAndClose(t *testing.T) {
 	})
 	assert(t, err == nil, "want ok but was %s", err)
 	assert(t, sq != nil, "want sq but was nil")
+	// get versions
+	str, err := sq.SqinnVersion()
+	assert(t, err == nil, "want ok but was %s", err)
+	assert(t, str != "", "wrong sqinn version %q", str)
+	io, err := sq.IoVersion()
+	assert(t, err == nil, "want ok but was %s", err)
+	assert(t, io == 1, "wrong io version %v", io)
+	str, err = sq.SqliteVersion()
+	assert(t, err == nil, "want ok but was %s", err)
+	assert(t, str != "", "wrong sqlite version %q", str)
 	// open db
 	err = sq.Open(":memory:")
 	assert(t, err == nil, "want ok but was %s", err)
@@ -58,6 +68,34 @@ func TestOpenAndClose(t *testing.T) {
 	// terminate sqinn
 	err = sq.Terminate()
 	assert(t, err == nil, "want ok but was %s", err)
+}
+
+func TestMustExecQuery(t *testing.T) {
+	// find sqinn path
+	var cwd string
+	cwd, _ = os.Getwd()
+	t.Logf("cwd=%q", cwd)
+	sqinnPath := os.Getenv("SQINN_PATH")
+	t.Logf("SQINN_PATH=%q", sqinnPath)
+	if sqinnPath == "" {
+		t.Logf("SQINN_PATH not set, will skip test")
+		t.SkipNow()
+	}
+	// launch
+	sq, err := sqinn.Launch(sqinn.Options{
+		SqinnPath: sqinnPath,
+	})
+	assert(t, sq != nil, "no sq")
+	assert(t, err == nil, "want ok but was %s", err)
+	defer sq.Terminate()
+	// open db
+	err = sq.Open(":memory:")
+	assert(t, err == nil, "want ok but was %s", err)
+	defer sq.Close()
+	// exec must work
+	sq.MustExec("DROP TABLE IF EXISTS users", 1, 0, nil)
+	sq.MustExecOne("DROP TABLE IF EXISTS users")
+	sq.MustQuery("SELECT 1", nil, nil)
 }
 
 func TestColTypes(t *testing.T) {
@@ -279,6 +317,11 @@ func TestMisuse(t *testing.T) {
 	assert(t, err != nil, "want err but was ok")
 	substr = "column index out of range"
 	assert(t, strings.Contains(err.Error(), substr), "want %q but was %s", substr, err)
+	// bind iparam < 1 must fail
+	err = sq.Bind(0, "bind_me")
+	assert(t, err != nil, "want err but was ok")
+	substr = "iparam must be >= 1"
+	assert(t, strings.Contains(err.Error(), substr), "want %q but was %s", substr, err)
 	// step must work
 	more, err := sq.Step()
 	assert(t, err == nil, "want ok but was %s", err)
@@ -309,6 +352,16 @@ func TestMisuse(t *testing.T) {
 	err = sq.Close()
 	assert(t, err != nil, "want err but was ok")
 	substr = "unable to close due to unfinalized statements"
+	assert(t, strings.Contains(err.Error(), substr), "want %q but was %s", substr, err)
+	// exec must fail as long as we have active statements
+	_, err = sq.Exec("SELECT 1", 1, 0, nil)
+	assert(t, err != nil, "want err but was ok")
+	substr = "must finalize first"
+	assert(t, strings.Contains(err.Error(), substr), "want %q but was %s", substr, err)
+	// query must fail as long as we have active statements
+	_, err = sq.Query("SELECT 1", nil, []byte{sqinn.ValInt})
+	assert(t, err != nil, "want err but was ok")
+	substr = "must finalize first"
 	assert(t, strings.Contains(err.Error(), substr), "want %q but was %s", substr, err)
 	// finalize must work
 	err = sq.Finalize()

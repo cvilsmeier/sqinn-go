@@ -108,7 +108,7 @@ func (sq *Sqinn) run(logger Logger) {
 
 // SqinnVersion returns the version of the Sqinn executable.
 // If an error occurs, it returns ("", err).
-func (sq *Sqinn) SqinnVersion(filename string) (string, error) {
+func (sq *Sqinn) SqinnVersion() (string, error) {
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
 	// req
@@ -149,7 +149,7 @@ func (sq *Sqinn) IoVersion() (byte, error) {
 
 // SqliteVersion returns the SQLite library version Sqinn was built with.
 // If an error occurs, it returns ("", err).
-func (sq *Sqinn) SqliteVersion(filename string) (string, error) {
+func (sq *Sqinn) SqliteVersion() (string, error) {
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
 	// req

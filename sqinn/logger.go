@@ -26,7 +26,6 @@ func (l StdLogger) Log(s string) {
 	} else {
 		log.Println(s)
 	}
-	log.Fatal()
 }
 
 // NoLogger does not log anything.
