@@ -56,6 +56,7 @@ type Sqinn struct {
 // Launch launches a new Sqinn subprocess. The options specify
 // the path to the sqinn executable, among others. See docs for
 // Options for details.
+// If an error occurs, it returns (nil, err).
 func Launch(options Options) (*Sqinn, error) {
 	sqinnPath := options.SqinnPath
 	if sqinnPath == "" {
@@ -106,6 +107,7 @@ func (sq *Sqinn) run(logger Logger) {
 }
 
 // SqinnVersion returns the version of the Sqinn executable.
+// If an error occurs, it returns ("", err).
 func (sq *Sqinn) SqinnVersion(filename string) (string, error) {
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
@@ -117,11 +119,16 @@ func (sq *Sqinn) SqinnVersion(filename string) (string, error) {
 		return "", err
 	}
 	var version string
-	version, resp = decodeString(resp)
+	version, resp, err = decodeString(resp)
+	if err != nil {
+		return "", err
+	}
 	return version, nil
 }
 
 // IoVersion returns the protocol version for this Sqinn instance.
+// The version is >= 1.
+// If an error occurs, it returns (0, err).
 func (sq *Sqinn) IoVersion() (byte, error) {
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
@@ -133,11 +140,15 @@ func (sq *Sqinn) IoVersion() (byte, error) {
 		return 0, err
 	}
 	var version byte
-	version, resp = decodeByte(resp)
+	version, resp, err = decodeByte(resp)
+	if err != nil {
+		return 0, err
+	}
 	return version, nil
 }
 
 // SqliteVersion returns the SQLite library version Sqinn was built with.
+// If an error occurs, it returns ("", err).
 func (sq *Sqinn) SqliteVersion(filename string) (string, error) {
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
@@ -149,7 +160,10 @@ func (sq *Sqinn) SqliteVersion(filename string) (string, error) {
 		return "", err
 	}
 	var version string
-	version, resp = decodeString(resp)
+	version, resp, err = decodeString(resp)
+	if err != nil {
+		return "", err
+	}
 	return version, nil
 }
 
@@ -182,7 +196,7 @@ func (sq *Sqinn) Open(filename string) error {
 // preparing a statement while another statement is still active
 // (not yet finalized) will result in a error.
 //
-// This is a low-level function. Most users will use Exec/Query instead.
+// This is a low-level function. Use Exec/Query instead.
 //
 // For further details, see https://www.sqlite.org/c3ref/prepare.html.
 func (sq *Sqinn) Prepare(sql string) error {
@@ -240,7 +254,7 @@ func (sq *Sqinn) bindValues(req []byte, values []interface{}) ([]byte, error) {
 // The value can be an int, int64, float64, string, []byte or nil.
 // Not that iparam starts at 1 (not 0):
 //
-// This is a low-level function. Most users will use Exec/Query instead.
+// This is a low-level function. Use Exec/Query instead.
 //
 // For further details, see https://www.sqlite.org/c3ref/bind_blob.html.
 func (sq *Sqinn) Bind(iparam int, value interface{}) error {
@@ -269,7 +283,7 @@ func (sq *Sqinn) Bind(iparam int, value interface{}) error {
 // Step advances the current statement to the next row or to completion.
 // It returns true if there are more rows available, false if not.
 //
-// This is a low-level function. Most users will use Exec/Query instead.
+// This is a low-level function. Use Exec/Query instead.
 //
 // For further details, see https://www.sqlite.org/c3ref/step.html.
 func (sq *Sqinn) Step() (bool, error) {
@@ -282,13 +296,16 @@ func (sq *Sqinn) Step() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	more, _ := decodeBool(resp)
+	more, _, err := decodeBool(resp)
+	if err != nil {
+		return false, err
+	}
 	return more, nil
 }
 
 // Reset resets the current statement to its initial state.
 //
-// This is a low-level function. Most users will use Exec/Query instead.
+// This is a low-level function. Use Exec/Query instead.
 //
 // For further details, see https://www.sqlite.org/c3ref/reset.html.
 func (sq *Sqinn) Reset() error {
@@ -306,7 +323,7 @@ func (sq *Sqinn) Reset() error {
 
 // Changes counts the number of rows modified by the last SQL operation.
 //
-// This is a low-level function. Most users will use Exec/Query instead.
+// This is a low-level function. Use Exec/Query instead.
 //
 // For further details, see https://www.sqlite.org/c3ref/changes.html.
 func (sq *Sqinn) Changes() (int, error) {
@@ -320,35 +337,45 @@ func (sq *Sqinn) Changes() (int, error) {
 		return 0, err
 	}
 	var changes int
-	changes, resp = decodeInt32(resp)
+	changes, resp, err = decodeInt32(resp)
+	if err != nil {
+		return 0, err
+	}
 	return changes, nil
 }
 
 func (sq *Sqinn) decodeAnyValue(resp []byte, colType byte) (AnyValue, []byte, error) {
 	var any AnyValue
 	var set bool
-	set, resp = decodeBool(resp)
+	var err error
+	set, resp, err = decodeBool(resp)
+	if err != nil {
+		return any, nil, err
+	}
 	if set {
 		switch colType {
 		case ValNull:
-			// user wants NULL, will get NULL
+			err = fmt.Errorf("ValNull is not a valid column type")
 		case ValInt:
 			any.Int.Set = true
-			any.Int.Value, resp = decodeInt32(resp)
+			any.Int.Value, resp, err = decodeInt32(resp)
 		case ValInt64:
 			any.Int64.Set = true
-			any.Int64.Value, resp = decodeInt64(resp)
+			any.Int64.Value, resp, err = decodeInt64(resp)
 		case ValDouble:
 			any.Double.Set = true
-			any.Double.Value, resp = decodeDouble(resp)
+			any.Double.Value, resp, err = decodeDouble(resp)
 		case ValText:
 			any.String.Set = true
-			any.String.Value, resp = decodeString(resp)
+			any.String.Value, resp, err = decodeString(resp)
 		case ValBlob:
 			any.Blob.Set = true
-			any.Blob.Value, resp = decodeBlob(resp)
+			any.Blob.Value, resp, err = decodeBlob(resp)
 		default:
-			return any, resp, fmt.Errorf("invalid col type %d", colType)
+			err = fmt.Errorf("invalid col type %d", colType)
+		}
+		if err != nil {
+			return any, nil, err
 		}
 	}
 	return any, resp, nil
@@ -358,7 +385,7 @@ func (sq *Sqinn) decodeAnyValue(resp []byte, colType byte) (AnyValue, []byte, er
 // The colType specifies the expected type of the column value.
 // Note that icol starts at 0 (not 1).
 //
-// This is a low-level function. Most users will use Exec/Query instead.
+// This is a low-level function. Use Exec/Query instead.
 //
 // For further details, see https://www.sqlite.org/c3ref/column_blob.html.
 func (sq *Sqinn) Column(icol int, colType byte) (AnyValue, error) {
@@ -384,7 +411,7 @@ func (sq *Sqinn) Column(icol int, colType byte) (AnyValue, error) {
 // Moreover, since Sqinn allows only one statement at a time,
 // each statement must be finalized before a new statement can be prepared.
 //
-// This is a low-level function. Most users will use Exec/Query instead.
+// This is a low-level function. Use Exec/Query instead.
 //
 // For further details, see https://www.sqlite.org/c3ref/finalize.html.
 func (sq *Sqinn) Finalize() error {
@@ -470,7 +497,7 @@ func (sq *Sqinn) MustExecOne(sql string) int {
 // Exec returns, for each iteration, the count of modified rows. The
 // resulting int slice will always be of length niterations.
 //
-// If an error occurs, Exec will return (nil, err).
+// If an error occurs, it will return (nil, err).
 func (sq *Sqinn) Exec(sql string, niterations, nparams int, values []interface{}) ([]int, error) {
 	if niterations < 0 {
 		return nil, fmt.Errorf("Exec '%s' niterations must be >= 0 but was %d", sql, niterations)
@@ -496,7 +523,10 @@ func (sq *Sqinn) Exec(sql string, niterations, nparams int, values []interface{}
 	}
 	changes := make([]int, niterations)
 	for i := 0; i < niterations; i++ {
-		changes[i], resp = decodeInt32(resp)
+		changes[i], resp, err = decodeInt32(resp)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return changes, nil
 }
@@ -524,7 +554,7 @@ func (sq *Sqinn) MustExec(sql string, niterations, nparams int, values []interfa
 // condition will crash your program. It is up to the caller to make sure
 // that all queried data fits into memory. The sql 'LIMIT' operator may be helpful.
 //
-// If an error occurs, Query will return (nil, err).
+// If an error occurs, it will return (nil, err).
 func (sq *Sqinn) Query(sql string, values []interface{}, colTypes []byte) ([]Row, error) {
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
@@ -543,7 +573,10 @@ func (sq *Sqinn) Query(sql string, values []interface{}, colTypes []byte) ([]Row
 		return nil, err
 	}
 	var nrows int
-	nrows, resp = decodeInt32(resp)
+	nrows, resp, err = decodeInt32(resp)
+	if err != nil {
+		return nil, err
+	}
 	rows := make([]Row, 0, nrows)
 	for i := 0; i < nrows; i++ {
 		var row Row
@@ -596,7 +629,10 @@ func (sq *Sqinn) writeAndRead(req []byte) ([]byte, error) {
 	if sq.logBinary {
 		log.Printf("received %d bytes resp size: %v", len(buf), buf)
 	}
-	sz, _ = decodeInt32(buf)
+	sz, _, err = decodeInt32(buf)
+	if err != nil {
+		return nil, err
+	}
 	if sz <= 0 {
 		return nil, fmt.Errorf("invalid resp size %d", sz)
 	}
@@ -611,10 +647,16 @@ func (sq *Sqinn) writeAndRead(req []byte) ([]byte, error) {
 	if sq.logBinary {
 		log.Printf("received %d bytes resp payload: %v", len(buf), buf)
 	}
-	var ok bool
-	ok, buf = decodeBool(buf)
-	if !ok {
-		msg, _ := decodeString(buf)
+	var success bool
+	success, buf, err = decodeBool(buf)
+	if err != nil {
+		return nil, err
+	}
+	if !success {
+		msg, _, err := decodeString(buf)
+		if err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("sqinn: %s", msg)
 	}
 	return buf, nil

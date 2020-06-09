@@ -5,28 +5,26 @@ import (
 	"strconv"
 )
 
-// TODO cvvvvvvvv DO NOT PANIC!!
-
 // byte marshalling
 
-func decodeByte(buf []byte) (byte, []byte) {
+func decodeByte(buf []byte) (byte, []byte, error) {
 	if len(buf) < 1 {
-		panic(fmt.Errorf("cannot decodeByte from a %d byte buffer", len(buf)))
+		return 0, nil, fmt.Errorf("cannot decodeByte from a %d byte buffer", len(buf))
 	}
 	v := buf[0]
 	buf = buf[1:]
-	return v, buf
+	return v, buf, nil
 }
 
 // bool marshalling
 
-func decodeBool(buf []byte) (bool, []byte) {
+func decodeBool(buf []byte) (bool, []byte, error) {
 	if len(buf) < 1 {
-		panic(fmt.Errorf("cannot decodeBool from a %d byte buffer", len(buf)))
+		return false, nil, fmt.Errorf("cannot decodeBool from a %d byte buffer", len(buf))
 	}
 	v := buf[0] != 0
 	buf = buf[1:]
-	return v, buf
+	return v, buf, nil
 }
 
 // int marshalling
@@ -40,16 +38,16 @@ func encodeInt32(v int) []byte {
 	}
 }
 
-func decodeInt32(buf []byte) (int, []byte) {
+func decodeInt32(buf []byte) (int, []byte, error) {
 	if len(buf) < 4 {
-		panic(fmt.Errorf("cannot decodeInt32 from a %d byte buffer", len(buf)))
+		return 0, nil, fmt.Errorf("cannot decodeInt32 from a %d byte buffer", len(buf))
 	}
 	v := int(buf[0])<<24 |
 		int(buf[1])<<16 |
 		int(buf[2])<<8 |
 		int(buf[3])<<0
 	buf = buf[4:]
-	return v, buf
+	return v, buf, nil
 }
 
 // int64 marshalling
@@ -67,9 +65,9 @@ func encodeInt64(v int64) []byte {
 	}
 }
 
-func decodeInt64(buf []byte) (int64, []byte) {
+func decodeInt64(buf []byte) (int64, []byte, error) {
 	if len(buf) < 8 {
-		panic(fmt.Errorf("cannot decodeInt64 from a %d byte buffer", len(buf)))
+		return 0, nil, fmt.Errorf("cannot decodeInt64 from a %d byte buffer", len(buf))
 	}
 	v := int64(buf[0])<<56 |
 		int64(buf[1])<<48 |
@@ -80,7 +78,7 @@ func decodeInt64(buf []byte) (int64, []byte) {
 		int64(buf[6])<<8 |
 		int64(buf[7])<<0
 	buf = buf[8:]
-	return v, buf
+	return v, buf, nil
 }
 
 // string marshalling
@@ -95,14 +93,17 @@ func encodeString(v string) []byte {
 	return buf
 }
 
-func decodeString(buf []byte) (string, []byte) {
-	sz, buf := decodeInt32(buf)
+func decodeString(buf []byte) (string, []byte, error) {
+	sz, buf, err := decodeInt32(buf)
+	if err != nil {
+		return "", nil, fmt.Errorf("cannot decodeString: %s", err)
+	}
 	if len(buf) < sz {
-		panic(fmt.Errorf("cannot decodeString length %d from a %d byte buffer", sz, len(buf)))
+		return "", nil, fmt.Errorf("cannot decodeString length %d from a %d byte buffer", sz, len(buf))
 	}
 	v := string(buf[:sz-1])
 	buf = buf[sz:]
-	return v, buf
+	return v, buf, nil
 }
 
 // blob marshalling
@@ -115,14 +116,17 @@ func encodeBlob(v []byte) []byte {
 	return buf
 }
 
-func decodeBlob(buf []byte) (_blob []byte, _buf []byte) {
-	sz, buf := decodeInt32(buf)
+func decodeBlob(buf []byte) (_blob []byte, _buf []byte, _err error) {
+	sz, buf, err := decodeInt32(buf)
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot decodeBlob: %s", err)
+	}
 	if len(buf) < sz {
-		panic(fmt.Errorf("cannot decodeBlob length %d from a %d byte buffer", sz, len(buf)))
+		return nil, nil, fmt.Errorf("cannot decodeBlob length %d from a %d byte buffer", sz, len(buf))
 	}
 	v := buf[:sz]
 	buf = buf[sz:]
-	return v, buf
+	return v, buf, nil
 }
 
 // double marshalling
@@ -132,11 +136,14 @@ func encodeDouble(v float64) []byte {
 	return encodeString(s)
 }
 
-func decodeDouble(buf []byte) (float64, []byte) {
-	s, buf := decodeString(buf)
+func decodeDouble(buf []byte) (float64, []byte, error) {
+	s, buf, err := decodeString(buf)
+	if err != nil {
+		return 0, nil, fmt.Errorf("cannot decodeDouble: %s", err)
+	}
 	v, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		panic(fmt.Errorf("cannot decodeDouble: %s", err))
+		return 0, nil, fmt.Errorf("cannot decodeDouble: %s", err)
 	}
-	return v, buf
+	return v, buf, nil
 }
