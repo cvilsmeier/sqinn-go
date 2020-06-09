@@ -5,6 +5,16 @@ SQINN-GO
 Sqinn-Go is a Go (Golang) library for accessing SQLite databases in pure Go.
 It uses Sqinn <https://github.com/cvilsmeier/sqinn> under the hood.
 
+If you want SQLite but do not want cgo, sqinn can be a solution.
+
+
+    !!!
+
+    Not production-ready. 
+
+    Preliminary version, everything may change.
+
+    !!!
 
 Description
 ------------------------------------------------------------------------------
@@ -13,22 +23,18 @@ Sqinn-Go uses Sqinn for accessing SQLite database. It starts Sqinn as a child
 process (`os/exec`) and communicates with Sqinn over stdin/stdout/stderr.
 
 ```go
-package main
+import "github.com/cvilsmeier/sqinn-go/sqinn"
 
-import (
-	"log"
-
-	"github.com/cvilsmeier/sqinn-go/sqinn"
-)
-
-// Simple sqinn-go usage. Error handling is left out. Parameter binding is also left out.
+// Simple sqinn-go usage. Error handling is left out for brevity.
 func main() {
+	
+	// Launch sqinn. Terminate at program exit
+	sq, _ := sqinn.Launch(sqinn.Options{})
+	defer sq.Terminate()
 
-	// Launch sqinn. Sqinn executable must be $PATH.
-	sq, _ := sqinn.New(sqinn.Options{})
-
-	// Open a database. Database file will be created if it does not exist.
+	// Open database. Close when we're done.
 	sq.Open("./users.db")
+	defer sq.Close()
 
 	// Create a table.
 	sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
@@ -38,25 +44,14 @@ func main() {
 	sq.ExecOne("INSERT INTO users (id, name) VALUES (2, 'Bob')")
 
 	// Query users.
-	rows, _ := sq.Query("SELECT id, name FROM users ORDER BY id", nil, []byte{sqinn.VAL_INT, sqinn.VAL_TEXT})
+	rows, _ := sq.Query("SELECT id, name FROM users ORDER BY id", nil, []byte{sqinn.ValInt, sqinn.ValText})
 	for _, row := range rows {
-		log.Printf("id=%d, name=%s", row.Values[0].AsInt(), row.Values[1].AsString())
-		// output:
-		// id=1, name=Alice
-		// id=2, name=Bob
+		fmt.Printf("id=%d, name=%s\n", row.Values[0].AsInt(), row.Values[1].AsString())
 	}
 
-	// Delete users.
-	change, _ := sq.ExecOne("DELETE FROM users")
-	log.Printf("deleted %d user(s)", change)
-	// output:
-	// deleted 2 user(s)
-
-	// Close the database, we're done.
-	sq.Close()
-
-	// Terminate sqinn at exit. Not necessarily needed but good behavior.
-	sq.Terminate()
+	// Output:
+	// id=1, name=Alice
+	// id=2, name=Bob
 }
 ```
 
@@ -73,8 +68,14 @@ But then you must specify it when opening a Sqinn connection:
 
 ```go
 
+	// use explicit path...
     sq, _ := sqinn.New(sqinn.Options{
         SqinnPath: "/path/to/sqinn",
+    })
+
+	// ...or take from environment
+    sq, _ := sqinn.New(sqinn.Options{
+        SqinnPath: os.Getenv("SQINN_PATH"),
     })
 
 ```
@@ -90,26 +91,48 @@ Discussion
 
 - No need to have gcc installed on development machine.
 
-- Golang bult-in cross compilation works.
+- Golang cross compilation works.
 
 - Faster build speed (1s vs 3s for sample program).
 
 - Smaller binary size (2MB vs 10MB for sample program).
 
-- Better performance when used non-concurrently, see
+- Better performance than cgo solutions, see
   [performance.md](performance.md)
 
 
 ### Disadvantages
 
+- No out-of-the-box connection pooling.
+
 - Sqinn-Go is not a Golang `database/sql` Driver.
 
-- Only one database connection at a time. For accessing two or more databases
-  at the same time, one has to launch multiple instances of Sqinn.
 
-- Only one prepared statement at a time. At least for now.
+License
+------------------------------------------------------------------------------
 
-- Only one SQL operation at a time (no concurrency). Concurrent usage of a
-  Sqinn instance has to be mutex'ed by the caller.
+This is free and unencumbered software released into the public domain.
 
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <https://unlicense.org>
 

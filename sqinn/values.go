@@ -1,9 +1,8 @@
 package sqinn
 
-// value types, see sqinn/src/handler.h
+// value types, same as in sqinn/src/handler.h
 
 // Value types for binding query parameters and retrieving column values.
-// These are the data types understood by Sqinn/SQLite.
 const (
 	ValNull   byte = 0
 	ValInt    byte = 1
@@ -37,7 +36,7 @@ type StringValue struct {
 	Value string
 }
 
-// A BlobValue holds a nullable byte slice value. The zero value is not set (a.k.a. NULL).
+// A BlobValue holds a nullable []byte value. The zero value is not set (a.k.a. NULL).
 type BlobValue struct {
 	Set   bool
 	Value []byte
@@ -52,7 +51,7 @@ type AnyValue struct {
 	Blob   BlobValue
 }
 
-// AsInt returns an int value or 0 if it is NULL or the value is not an int.
+// AsInt returns an int value, or 0 if it is not set (NULL), or the value is not an int.
 func (a AnyValue) AsInt() int {
 	return a.Int.Value
 }
@@ -67,12 +66,12 @@ func (a AnyValue) AsDouble() float64 {
 	return a.Double.Value
 }
 
-// AsString returns a double value or 0.0 if it is NULL or the value is not a string.
+// AsString returns a string value or "" if it is NULL or the value is not a string.
 func (a AnyValue) AsString() string {
 	return a.String.Value
 }
 
-// AsBlob returns a blob value or nil if it is NULL or the value is not a blob.
+// AsBlob returns a []byte value or nil if it is NULL or the value is not a blob.
 func (a AnyValue) AsBlob() []byte {
 	return a.Blob.Value
 }

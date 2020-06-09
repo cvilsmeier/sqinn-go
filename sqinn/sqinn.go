@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-// function codes, see sqinn/src/handler.h
+// function codes, same as in sqinn/src/handler.h
 
 const (
 	fcSqinnVersion  byte = 1
@@ -38,23 +38,25 @@ type Options struct {
 	// Logger logs the debug and error messages that the sinn subprocess will output
 	// on its stderr. Default is nil, which does not log anything.
 	Logger Logger
+
+	// Log the binary io protocol. Only for debugging. Should normally be false. Default is false.
+	LogBinary bool
 }
 
 // Sqinn is a running sqinn instance.
 type Sqinn struct {
-	mx   sync.Mutex
-	cmd  *exec.Cmd
-	sin  io.WriteCloser
-	sout io.ReadCloser
-	serr io.ReadCloser
+	mx        sync.Mutex
+	logBinary bool
+	cmd       *exec.Cmd
+	sin       io.WriteCloser
+	sout      io.ReadCloser
+	serr      io.ReadCloser
 }
 
-/*
-New launches a new Sqinn instance. The options argument specifies
-the path to the sqinn executable. Moreover, it specifies how Sqinn's
-stderr log outputs should be logged.
-*/
-func New(options Options) (*Sqinn, error) {
+// Launch launches a new Sqinn subprocess. The options specify
+// the path to the sqinn executable, among others. See docs for
+// Options for details.
+func Launch(options Options) (*Sqinn, error) {
 	sqinnPath := options.SqinnPath
 	if sqinnPath == "" {
 		sqinnPath = "sqinn"
@@ -82,7 +84,7 @@ func New(options Options) (*Sqinn, error) {
 		sin.Close()
 		return nil, err
 	}
-	sq := &Sqinn{sync.Mutex{}, cmd, sin, sout, serr}
+	sq := &Sqinn{sync.Mutex{}, options.LogBinary, cmd, sin, sout, serr}
 	logger := options.Logger
 	if logger == nil {
 		logger = NoLogger{}
@@ -373,10 +375,6 @@ func (sq *Sqinn) Column(icol int, colType byte) (AnyValue, error) {
 	if err != nil {
 		return any, err
 	}
-	set, resp := decodeBool(resp)
-	if !set {
-		return any, nil
-	}
 	any, _, err = sq.decodeAnyValue(resp, colType)
 	return any, err
 }
@@ -419,7 +417,7 @@ func (sq *Sqinn) Close() error {
 // and do not query rows. A good use case is for beginning and committing
 // a transaction:
 //
-//     _, err = sq.ExecOne("BEGIN TRANSACTION");
+//     _, err = sq.ExecOne("BEGIN");
 //     // do stuff in tx
 //     _, err = sq.ExecOne("COMMIT");
 //
@@ -462,7 +460,7 @@ func (sq *Sqinn) MustExecOne(sql string) int {
 // nparams must be >= 0.
 //
 // The values argument holds the parameter values. Parameter values can be
-// of the following type: int, int64, float64, string, []byte or nil.
+// of the following type: int, int64, float64, string, blob or nil.
 // The length of values must always be niterations * nparams.
 //
 // Internally, Exec preapres a statement, binds nparams parameters, steps
@@ -512,11 +510,11 @@ func (sq *Sqinn) MustExec(sql string, niterations, nparams int, values []interfa
 	return mods
 }
 
-// Query executes a SQL statement and returns all rows. It supports bind parmeters.
-// Query is used mostly for SELECT statements or PRAGMA statements that return rows.
+// Query executes a SQL statement and returns all rows.
+// Query is used mostly for SELECT statements.
 //
 // The values argument holds a list of bind parameters. Values must be of type
-// int, int64, float64, string or []byte.
+// int, int64, float64, string, blob or nil.
 //
 // The colTypes argument holds a list of column types that the query yields.
 //
@@ -573,51 +571,45 @@ func (sq *Sqinn) MustQuery(sql string, values []interface{}, colTypes []byte) []
 }
 
 func (sq *Sqinn) writeAndRead(req []byte) ([]byte, error) {
-	traceReq := false
-	traceResp := false
 	// write req
 	sz := len(req)
 	buf := make([]byte, 0, 4+len(req))
 	buf = append(buf, encodeInt32(sz)...)
 	buf = append(buf, req...)
-	if traceReq {
-		log.Printf("write %d bytes sz+req: %v", len(buf), buf)
+	if sq.logBinary {
+		log.Printf("write 4 bytes req size: %v", buf[0:4])
+		log.Printf("write %d bytes req payload: %v", len(req), req)
 	}
 	_, err := sq.sin.Write(buf)
 	if err != nil {
 		return nil, err
 	}
 	// read resp
-	if traceResp {
-		// time.Sleep(100 * time.Millisecond)
-		log.Printf("waiting for 4 bytes resp sz")
+	if sq.logBinary {
+		log.Printf("waiting for 4 bytes resp size")
 	}
 	buf = make([]byte, 4)
 	_, err = io.ReadFull(sq.sout, buf)
 	if err != nil {
-		return nil, fmt.Errorf("while reading from sqinn: %w", err)
+		return nil, fmt.Errorf("cannot read resp size: %w", err)
 	}
-	if traceResp {
-		log.Printf("received %d bytes resp length: %v", len(buf), buf)
+	if sq.logBinary {
+		log.Printf("received %d bytes resp size: %v", len(buf), buf)
 	}
 	sz, _ = decodeInt32(buf)
-	if traceResp {
-		log.Printf("resp length will be %d bytes", sz)
-	}
 	if sz <= 0 {
-		return nil, fmt.Errorf("invalid response size %d", sz)
+		return nil, fmt.Errorf("invalid resp size %d", sz)
 	}
 	buf = make([]byte, sz)
-	if traceResp {
-		log.Printf("waiting for %d resp data", sz)
+	if sq.logBinary {
+		log.Printf("waiting for %d resp payload", sz)
 	}
 	_, err = io.ReadFull(sq.sout, buf)
 	if err != nil {
-		return nil, fmt.Errorf("while reading from sqinn: %w", err)
+		return nil, fmt.Errorf("cannot read resp payload: %w", err)
 	}
-	if traceResp {
-		log.Printf("received %d bytes resp data: %v", len(buf), buf)
-		// time.Sleep(100 * time.Millisecond)
+	if sq.logBinary {
+		log.Printf("received %d bytes resp payload: %v", len(buf), buf)
 	}
 	var ok bool
 	ok, buf = decodeBool(buf)
@@ -629,7 +621,7 @@ func (sq *Sqinn) writeAndRead(req []byte) ([]byte, error) {
 }
 
 // Terminate terminates a running Sqinn instance.
-// Each Sqinn instance launched with New should be terminated
+// Each launched Sqinn instance should be terminated
 // with Terminate. After Terminate has been called, this Sqinn
 // instance must not be used any more.
 func (sq *Sqinn) Terminate() error {

@@ -79,7 +79,7 @@ func decodeInt64(buf []byte) (int64, []byte) {
 		int64(buf[5])<<16 |
 		int64(buf[6])<<8 |
 		int64(buf[7])<<0
-	buf = buf[4:]
+	buf = buf[8:]
 	return v, buf
 }
 
@@ -115,7 +115,7 @@ func encodeBlob(v []byte) []byte {
 	return buf
 }
 
-func decodeBlob(buf []byte) ([]byte, []byte) {
+func decodeBlob(buf []byte) (_blob []byte, _buf []byte) {
 	sz, buf := decodeInt32(buf)
 	if len(buf) < sz {
 		panic(fmt.Errorf("cannot decodeBlob length %d from a %d byte buffer", sz, len(buf)))

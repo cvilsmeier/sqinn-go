@@ -14,7 +14,7 @@ import (
 func main() {
 
 	// Launch sqinn. Sqinn executable path is taken from environment.
-	sq, _ := sqinn.New(sqinn.Options{
+	sq, _ := sqinn.Launch(sqinn.Options{
 		SqinnPath: os.Getenv("SQINN_PATH"),
 	})
 
@@ -52,7 +52,7 @@ func main() {
 
 // Launch sqinn with path
 func launchWithPath() {
-	sq, _ := sqinn.New(sqinn.Options{
+	sq, _ := sqinn.Launch(sqinn.Options{
 		SqinnPath: "C:/projects/my_server/bin/sqinn.exe",
 	})
 	_ = sq
@@ -60,7 +60,7 @@ func launchWithPath() {
 
 // Use logger
 func launchWithLogger() {
-	sq, _ := sqinn.New(sqinn.Options{
+	sq, _ := sqinn.Launch(sqinn.Options{
 		Logger: sqinn.StdLogger{},
 	})
 	_ = sq

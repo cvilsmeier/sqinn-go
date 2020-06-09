@@ -2,63 +2,81 @@ package sqinn_test
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/cvilsmeier/sqinn-go/sqinn"
 )
 
 func Example_basic() {
-	// Launch sqinn, sqinn-path is taken from environment
-	sq, err := sqinn.New(sqinn.Options{
+
+	// Launch sqinn. Terminate at program exit
+	sq, _ := sqinn.Launch(sqinn.Options{
 		SqinnPath: os.Getenv("SQINN_PATH"),
-		Logger:    sqinn.StdLogger{},
 	})
-	if err != nil {
-		log.Fatal(err)
-	}
 	defer sq.Terminate()
 
-	// Open in-memory database
-	err = sq.Open(":memory:")
-	if err != nil {
-		log.Fatal(err)
+	// Open database. Close when we're done.
+	sq.Open(":memory:")
+	defer sq.Close()
+
+	// Create a table.
+	sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
+
+	// Insert users.
+	sq.ExecOne("INSERT INTO users (id, name) VALUES (1, 'Alice')")
+	sq.ExecOne("INSERT INTO users (id, name) VALUES (2, 'Bob')")
+
+	// Query users.
+	rows, _ := sq.Query("SELECT id, name FROM users ORDER BY id", nil, []byte{sqinn.ValInt, sqinn.ValText})
+	for _, row := range rows {
+		fmt.Printf("%d %q\n", row.Values[0].AsInt(), row.Values[1].AsString())
 	}
+
+	// Output:
+	// 1 "Alice"
+	// 2 "Bob"
+}
+
+func Example_parameterBinding() {
+	// Launch
+	sq, _ := sqinn.Launch(sqinn.Options{
+		SqinnPath: os.Getenv("SQINN_PATH"),
+	})
+	defer sq.Terminate()
+
+	// Open database
+	sq.Open(":memory:")
 	defer sq.Close()
 
 	// Create table
-	sq.MustExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
+	sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
 
-	// Insert users
-	sq.MustExecOne("BEGIN")
-	sq.MustExec(
+	// Insert 3 rows at once
+	sq.ExecOne("BEGIN")
+	sq.Exec(
 		"INSERT INTO users (id, name) VALUES (?,?)",
-		3, // we have 3 users
-		2, // each user 2 columns
+		3, // insert 3 rows
+		2, // each row has 2 columns
 		[]interface{}{
-			1, "Alice",
-			2, "Bob",
-			3, nil,
+			1, "Alice", // bind first row
+			2, "Bob", // bind second row
+			3, nil, // third row has no name
 		},
 	)
-	sq.MustExecOne("COMMIT")
+	sq.ExecOne("COMMIT")
 
-	// Query users
-	rows := sq.MustQuery(
+	// Query rows
+	rows, _ := sq.Query(
 		"SELECT id, name FROM users WHERE id < ? ORDER BY id ASC",
 		[]interface{}{42},                   // WHERE id < 42
 		[]byte{sqinn.ValInt, sqinn.ValText}, // two columns: int id, string name
 	)
 	for _, row := range rows {
-		fmt.Printf(
-			"%d '%s'\n",
-			row.Values[0].AsInt(),
-			row.Values[1].AsString(),
-		)
+		fmt.Printf("%d %q\n", row.Values[0].AsInt(), row.Values[1].AsString())
 	}
 
 	// Output:
-	// 1 'Alice'
-	// 2 'Bob'
-	// 3 ''
+	// 1 "Alice"
+	// 2 "Bob"
+	// 3 ""
 }

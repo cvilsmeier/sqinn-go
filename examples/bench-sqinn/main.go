@@ -8,132 +8,20 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/cvilsmeier/sqinn-go/sqinn"
 )
 
-func testFunctions(sqinnPath, dbFile string, nusers int) {
-	funcname := "testFunctions"
-	log.Printf("TEST %s", funcname)
-	log.Printf("sqinnPath=%s, dbFile=%s, nusers=%d", sqinnPath, dbFile, nusers)
-	assert := func(c bool) {
-		if !c {
-			panic("assertion failed")
-		}
-	}
-	check := func(err error) {
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	// make sure db does not exist
-	os.Remove(dbFile)
-	// launch sqinn
-	sq, err := sqinn.New(sqinn.Options{
-		SqinnPath: sqinnPath,
-	})
-	check(err)
-	// open db
-	err = sq.Open(dbFile)
-	check(err)
-	t1 := time.Now()
-	// prepare schema
-	sql := "CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR, age INTEGER, rating REAL)"
-	err = sq.Prepare(sql)
-	check(err)
-	_, err = sq.Step()
-	check(err)
-	err = sq.Finalize()
-	check(err)
-	// insert users
-	sql = "BEGIN TRANSACTION"
-	err = sq.Prepare(sql)
-	check(err)
-	_, err = sq.Step()
-	check(err)
-	err = sq.Finalize()
-	check(err)
-	sql = "INSERT INTO users (id, name, age, rating) VALUES (?,?,?,?)"
-	err = sq.Prepare(sql)
-	check(err)
-	for i := 0; i < nusers; i++ {
-		id := i + 1
-		name := fmt.Sprintf("User_%d", id)
-		age := 33 + i
-		rating := 0.13 * float64(i+1)
-		check(sq.Bind(1, id))
-		check(sq.Bind(2, name))
-		check(sq.Bind(3, age))
-		check(sq.Bind(4, rating))
-		_, err = sq.Step()
-		check(err)
-		check(sq.Reset())
-		ch, err := sq.Changes()
-		check(err)
-		assert(ch == 1)
-	}
-	err = sq.Finalize()
-	check(err)
-	sql = "COMMIT"
-	err = sq.Prepare(sql)
-	check(err)
-	_, err = sq.Step()
-	check(err)
-	err = sq.Finalize()
-	check(err)
-	t2 := time.Now()
-	// query users
-	sql = "SELECT id, name, age, rating FROM users ORDER BY id"
-	err = sq.Prepare(sql)
-	check(err)
-	var more bool
-	more, err = sq.Step()
-	check(err)
-	var nrows int
-	for more {
-		nrows++
-		idValue, err := sq.Column(0, sqinn.ValInt)
-		check(err)
-		nameValue, err := sq.Column(1, sqinn.ValText)
-		check(err)
-		ageValue, err := sq.Column(2, sqinn.ValInt)
-		check(err)
-		ratingValue, err := sq.Column(3, sqinn.ValDouble)
-		check(err)
-		_, _, _, _ = idValue, nameValue, ageValue, ratingValue
-		// log.Printf("%d | %s | %d | %g", idValue.Value, nameValue.Value, ageValue.Value, ratingValue.Value)
-		more, err = sq.Step()
-		check(err)
-	}
-	log.Printf("fetched %d rows", nrows)
-	err = sq.Finalize()
-	check(err)
-	t3 := time.Now()
-	// close db
-	err = sq.Close()
-	check(err)
-	// terminate sqinn
-	err = sq.Terminate()
-	check(err)
-	log.Printf("insert took %s", t2.Sub(t1))
-	log.Printf("query took %s", t3.Sub(t2))
-	log.Printf("TEST %s OK", funcname)
-}
-
-func testUsers(sqinnPath, dbFile string, nusers int, bindRating bool) {
-	funcname := "testUsers"
-	log.Printf("TEST %s", funcname)
+func benchUsers(sqinnPath, dbFile string, nusers int, bindRating bool) {
+	funcname := "benchUsers"
+	log.Printf("BENCH %s", funcname)
 	log.Printf("sqinnPath=%s, dbFile=%s, nusers=%d, bindRating=%t", sqinnPath, dbFile, nusers, bindRating)
-	check := func(err error) {
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
 	// make sure db doesn't exist
 	os.Remove(dbFile)
 	// launch sqinn
-	sq, err := sqinn.New(sqinn.Options{
+	sq, err := sqinn.Launch(sqinn.Options{
 		SqinnPath: sqinnPath,
 	})
 	check(err)
@@ -164,15 +52,9 @@ func testUsers(sqinnPath, dbFile string, nusers int, bindRating bool) {
 	colTypes := []byte{sqinn.ValInt, sqinn.ValText, sqinn.ValInt, sqinn.ValDouble}
 	rows, err := sq.Query("SELECT id, name, age, rating FROM users ORDER BY id", nil, colTypes)
 	check(err)
-	log.Printf("fetched %d rows", len(rows))
-	// for _, row := range rows {
-	// 	log.Printf("%d | %s | %d | %g",
-	// 		row.Values[0].IntValue.Value,
-	// 		row.Values[1].StringValue.Value,
-	// 		row.Values[2].IntValue.Value,
-	// 		row.Values[3].DoubleValue.Value,
-	// 	)
-	// }
+	if len(rows) != nusers {
+		log.Printf("want %v rows but was %v", nusers, len(rows))
+	}
 	t3 := time.Now()
 	// close db
 	err = sq.Close()
@@ -182,24 +64,20 @@ func testUsers(sqinnPath, dbFile string, nusers int, bindRating bool) {
 	check(err)
 	log.Printf("insert took %s", t2.Sub(t1))
 	log.Printf("query took %s", t3.Sub(t2))
-	log.Printf("TEST %s OK", funcname)
+	log.Printf("BENCH %s OK", funcname)
 }
 
-func testComplex(sqinnPath, dbFile string, nprofiles, nusers, nlocations int) {
-	funcname := "testComplex"
-	log.Printf("TEST %s", funcname)
+func benchComplexSchema(sqinnPath, dbFile string, nprofiles, nusers, nlocations int) {
+	funcname := "benchComplexSchema"
+	log.Printf("BENCH %s", funcname)
 	log.Printf("sqinnPath=%s, dbFile=%s, nprofiles, nusers, nlocations = %d, %d, %d", sqinnPath, dbFile, nprofiles, nusers, nlocations)
-	check := func(err error) {
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	sq, err := sqinn.New(sqinn.Options{
+	// make sure db doesn't exist
+	os.Remove(dbFile)
+	// launch sqinn
+	sq, err := sqinn.Launch(sqinn.Options{
 		SqinnPath: sqinnPath,
 	})
 	check(err)
-	// make sure db doesn't exist
-	os.Remove(dbFile)
 	// open db
 	check(sq.Open(dbFile))
 	_, err = sq.ExecOne("PRAGMA foreign_keys=1")
@@ -291,81 +169,110 @@ func testComplex(sqinnPath, dbFile string, nprofiles, nusers, nlocations int) {
 		"ORDER BY locations.name, locations.id, users.name, users.id, profiles.name, profiles.id"
 	rows, err := sq.Query(sql, []interface{}{0, 1}, []byte{sqinn.ValText, sqinn.ValText, sqinn.ValText, sqinn.ValInt, sqinn.ValText, sqinn.ValText, sqinn.ValText, sqinn.ValInt, sqinn.ValText, sqinn.ValText, sqinn.ValInt})
 	check(err)
-	log.Printf("fetched %d rows", len(rows))
+	expectedRows := nprofiles * nusers * nlocations
+	if len(rows) != expectedRows {
+		log.Fatalf("expected %v rows but was %v", expectedRows, len(rows))
+	}
 	t3 := time.Now()
 	// close and terminate
 	check(sq.Close())
 	check(sq.Terminate())
 	log.Printf("insert took %s", t2.Sub(t1))
 	log.Printf("query took %s", t3.Sub(t2))
-	log.Printf("TEST %s OK", funcname)
+	log.Printf("BENCH %s OK", funcname)
 }
 
-func testBlob(sqinnPath, dbFile string) {
-	funcname := "testBlob"
-	log.Printf("TEST %s", funcname)
-	log.Printf("sqinnPath=%s, dbFile=%s", sqinnPath, dbFile)
-	assert := func(c bool, format string, v ...interface{}) {
-		if !c {
-			panic(fmt.Errorf(format, v...))
-			// log.Fatalf(format, v...)
-		}
-	}
-	sq, err := sqinn.New(sqinn.Options{
+func benchConcurrent(sqinnPath, dbFile string, nusers, nworkers int) {
+	funcname := "benchConcurrent"
+	log.Printf("BENCH %s", funcname)
+	log.Printf("sqinnPath=%s, dbFile=%s, nusers=%d, nworkers=%d", sqinnPath, dbFile, nusers, nworkers)
+	// make sure db doesn't exist
+	os.Remove(dbFile)
+	// launch sqinn
+	sq, err := sqinn.Launch(sqinn.Options{
 		SqinnPath: sqinnPath,
 	})
-	assert(err == nil, "%s", err)
+	check(err)
+	defer sq.Terminate()
 	// open db
-	err = sq.Open(dbFile)
-	assert(err == nil, "%s", err)
-	_, err = sq.ExecOne("DROP TABLE IF EXISTS users")
-	assert(err == nil, "%s", err)
-	_, err = sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, image BLOB)")
-	assert(err == nil, "%s", err)
-	// insert
-	id := 1
-	image := make([]byte, 64)
-	for i := 0; i < len(image); i++ {
-		image[i] = byte(i)
+	check(sq.Open(dbFile))
+	defer sq.Close()
+	// prepare schema
+	_, err = sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
+	check(err)
+	// insert nusers
+	_, err = sq.ExecOne("BEGIN")
+	check(err)
+	values := make([]interface{}, 0, nusers*2)
+	for u := 0; u < nusers; u++ {
+		id := u + 1
+		name := fmt.Sprintf("User %d", u)
+		values = append(values, id, name)
 	}
-	values := []interface{}{id, image}
-	_, err = sq.Exec("INSERT INTO users (id,image) VALUES(?,?)", 1, 2, values)
-	assert(err == nil, "%s", err)
+	_, err = sq.Exec("INSERT INTO users (id,name) VALUES(?,?)", nusers, 2, values)
+	check(err)
+	_, err = sq.ExecOne("COMMIT")
+	check(err)
 	// query
-	sql := "SELECT id, image FROM users ORDER BY id"
-	rows, err := sq.Query(sql, nil, []byte{sqinn.ValInt, sqinn.ValBlob})
-	assert(err == nil, "%s", err)
-	assert(len(rows) == 1, "wrong rows %d", len(rows))
-	// close and terminate
-	err = sq.Close()
-	assert(err == nil, "%s", err)
-	err = sq.Terminate()
-	assert(err == nil, "%s", err)
-	log.Printf("TEST %s OK", funcname)
+	t1 := time.Now()
+	var wg sync.WaitGroup
+	wg.Add(nworkers)
+	for w := 0; w < nworkers; w++ {
+		go func(w int) {
+			defer wg.Done()
+			// log.Printf("worker %v start", w)
+			// defer log.Printf("worker %v end", w)
+			// launch sqinn
+			sq, err := sqinn.Launch(sqinn.Options{
+				SqinnPath: sqinnPath,
+			})
+			check(err)
+			defer sq.Terminate()
+			// open db
+			err = sq.Open(dbFile)
+			check(err)
+			defer sq.Close()
+			// set busy timeout
+			_, err = sq.ExecOne("PRAGMA busy_timeout = 10000;")
+			check(err)
+			// query
+			rows, err := sq.Query("SELECT id, name FROM users ORDER BY id", nil, []byte{sqinn.ValInt, sqinn.ValText})
+			if err != nil {
+				log.Fatalf("worker %v: %v", w, err)
+			}
+			nrows := len(rows)
+			// log.Printf("worker %v has %v rows", w, nrows)
+			if nrows != nusers {
+				log.Fatalf("worker %v: want %v rows but was %v", w, nusers, nrows)
+			}
+		}(w)
+	}
+	wg.Wait()
+	t2 := time.Now()
+	// done
+	log.Printf("queries took %s", t2.Sub(t1))
+	log.Printf("BENCH %s DONE", funcname)
+}
+
+func check(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
-	// log.SetOutput(ioutil.Discard)
-	log.SetFlags(log.Lmicroseconds)
-	sqinnPath := "sqinn"
-	dbFile := ":memory:"
-	flag.StringVar(&sqinnPath, "sqinn", sqinnPath, "name of sqinn executable")
+	sqinnPath := os.Getenv("SQINN_PATH")
+	dbFile := ""
+	flag.StringVar(&sqinnPath, "sqinn", sqinnPath, "path to sqinn executable")
 	flag.StringVar(&dbFile, "db", dbFile, "path to db file")
 	flag.Parse()
-	for _, arg := range flag.Args() {
-		if arg == "test" {
-			testFunctions(sqinnPath, dbFile, 2)
-			testUsers(sqinnPath, dbFile, 2, true)
-			testComplex(sqinnPath, dbFile, 2, 2, 2)
-			testBlob(sqinnPath, dbFile)
-			return
-		} else if arg == "bench" {
-			testFunctions(sqinnPath, dbFile, 10*1000)
-			testUsers(sqinnPath, dbFile, 1000*1000, false)
-			testUsers(sqinnPath, dbFile, 1000*1000, true)
-			testComplex(sqinnPath, dbFile, 100, 100, 10)
-			return
-		}
+	if dbFile == "" {
+		log.Fatalf("no dbFile, please set -db flag")
 	}
-	fmt.Printf("no command, want 'test' or 'bench'\n")
+	benchUsers(sqinnPath, dbFile, 1000*1000, false)
+	benchUsers(sqinnPath, dbFile, 1000*1000, true)
+	benchComplexSchema(sqinnPath, dbFile, 200, 100, 10)
+	benchConcurrent(sqinnPath, dbFile, 1000*1000, 2)
+	benchConcurrent(sqinnPath, dbFile, 1000*1000, 4)
+	benchConcurrent(sqinnPath, dbFile, 1000*1000, 8)
 }

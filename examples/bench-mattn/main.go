@@ -9,14 +9,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
-	// please remove comment to enable go-sqlite3 benchmark
+	// enable next line to build bench-mattn
 	// _ "github.com/mattn/go-sqlite3"
 )
 
-func testUsers(dbFile string, nusers int, bindRating bool) {
-	funcname := "testUsers"
-	log.Printf("TEST %s", funcname)
+func benchUsers(dbFile string, nusers int, bindRating bool) {
+	funcname := "benchUsers"
+	log.Printf("BENCH %s", funcname)
 	log.Printf("dbFile=%s, nusers=%d, bindRating=%t", dbFile, nusers, bindRating)
 	// make sure db doesn't exist
 	os.Remove(dbFile)
@@ -65,16 +66,18 @@ func testUsers(dbFile string, nusers int, bindRating bool) {
 		check(err)
 
 	}
-	log.Printf("fetched %d rows", nrows)
+	if nrows != nusers {
+		log.Fatalf("expected %v rows but was %v", nusers, nrows)
+	}
 	t3 := time.Now()
 	log.Printf("insert took %s", t2.Sub(t1))
 	log.Printf("query took %s", t3.Sub(t2))
-	log.Printf("TEST %s OK", funcname)
+	log.Printf("BENCH %s DONE", funcname)
 }
 
-func testComplex(dbFile string, nprofiles, nusers, nlocations int) {
-	funcname := "testComplex"
-	log.Printf("TEST %s", funcname)
+func benchComplexSchema(dbFile string, nprofiles, nusers, nlocations int) {
+	funcname := "benchComplexSchema"
+	log.Printf("BENCH %s", funcname)
 	log.Printf("dbFile=%s, nprofiles, nusers, nlocations = %d, %d, %d", dbFile, nprofiles, nusers, nlocations)
 	// make sure db doesn't exist
 	os.Remove(dbFile)
@@ -199,25 +202,97 @@ func testComplex(dbFile string, nprofiles, nusers, nlocations int) {
 			&profileActive,
 		)
 	}
-	log.Printf("fetched %d rows", nrows)
+	expectedRows := nprofiles * nusers * nlocations
+	if nrows != expectedRows {
+		log.Fatalf("expected %v rows but was %v", expectedRows, nrows)
+	}
 	t3 := time.Now()
 	// done
 	log.Printf("insert took %s", t2.Sub(t1))
 	log.Printf("query took %s", t3.Sub(t2))
-	log.Printf("TEST %s OK", funcname)
+	log.Printf("BENCH %s DONE", funcname)
 }
 
-func main() {
-	dbFile := ":memory:"
-	flag.StringVar(&dbFile, "db", dbFile, "path to db file")
-	flag.Parse()
-	testUsers(dbFile, 1000*1000, false)
-	testUsers(dbFile, 1000*1000, true)
-	testComplex(dbFile, 100, 100, 10)
+func benchConcurrent(dbFile string, nusers, nworkers int) {
+	funcname := "benchConcurrent"
+	log.Printf("BENCH %s", funcname)
+	log.Printf("dbFile=%s, nusers=%d, nworkers=%d", dbFile, nusers, nworkers)
+	// make sure db doesn't exist
+	os.Remove(dbFile)
+	// open db
+	db, err := sql.Open("sqlite3", dbFile)
+	check(err)
+	defer db.Close()
+	// prepare schema
+	_, err = db.Exec("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
+	check(err)
+	// insert nusers
+	tx, err := db.Begin()
+	check(err)
+	stmt, err := tx.Prepare("INSERT INTO users (id,name) VALUES(?,?)")
+	for u := 0; u < nusers; u++ {
+		id := u + 1
+		name := fmt.Sprintf("User %d", u)
+		_, err = stmt.Exec(id, name)
+		check(err)
+	}
+	err = stmt.Close()
+	check(err)
+	err = tx.Commit()
+	check(err)
+	// query
+	t1 := time.Now()
+	var wg sync.WaitGroup
+	wg.Add(nworkers)
+	for w := 0; w < nworkers; w++ {
+		go func(w int) {
+			defer wg.Done()
+			// log.Printf("worker %v start", w)
+			// defer log.Printf("worker %v end", w)
+			db, err := sql.Open("sqlite3", dbFile)
+			check(err)
+			defer db.Close()
+			rows, err := db.Query("SELECT id, name FROM users ORDER BY id")
+			if err != nil {
+				log.Fatalf("worker %v: %v", w, err)
+			}
+			nrows := 0
+			var id sql.NullInt32
+			var name sql.NullString
+			for rows.Next() {
+				nrows++
+				rows.Scan(&id, &name)
+			}
+			// log.Printf("worker %v: have %v rows", w, nrows)
+			if nrows != nusers {
+				log.Fatalf("worker %v: want %v rows but was %v", w, nusers, nrows)
+			}
+		}(w)
+	}
+	wg.Wait()
+	t2 := time.Now()
+	// done
+	log.Printf("queries took %s", t2.Sub(t1))
+	log.Printf("BENCH %s DONE", funcname)
 }
 
 func check(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("unexpected error: %v", err)
 	}
+}
+
+func main() {
+	dbFile := ""
+	flag.StringVar(&dbFile, "db", dbFile, "path to db file")
+	flag.Parse()
+	if dbFile == "" {
+		log.Fatalf("no dbFile, please set -db flag")
+	}
+	benchUsers(dbFile, 1000*1000, false)
+	benchUsers(dbFile, 1000*1000, true)
+	benchComplexSchema(dbFile, 200, 100, 10)
+	benchConcurrent(dbFile, 1000*1000, 2)
+	benchConcurrent(dbFile, 1000*1000, 4)
+	benchConcurrent(dbFile, 1000*1000, 8)
 }
