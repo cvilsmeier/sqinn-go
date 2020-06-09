@@ -62,12 +62,12 @@ But then you must specify it when opening a Sqinn connection:
 
 ```go
 
-	// use explicit path...
+    // use explicit path...
     sq, _ := sqinn.New(sqinn.Options{
         SqinnPath: "/path/to/sqinn",
     })
 
-	// ...or take from environment
+    // ...or take from environment
     sq, _ := sqinn.New(sqinn.Options{
         SqinnPath: os.Getenv("SQINN_PATH"),
     })
