@@ -75,6 +75,6 @@ The results are (lower is better), N is the number of goroutines:
 ## Summary
 
 In every benchmark I executed, Sqinn-Go is slightly faster than the cgo
-package. But: Every application is different, and I
-recommend that you perform benchmarks based on the typical workload of
-your application. As always, it depends.
+package. But: Every application is different, and I recommend that you perform
+benchmarks based on the typical workload of your application. As always, it
+depends.
