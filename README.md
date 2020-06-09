@@ -84,7 +84,7 @@ If do not want to use a pre-built binary, you can compile Sqinn yourself. See
 <https://github.com/cvilsmeier/sqinn> for instructions.
 
 
-Discussion
+Pros and Cons
 ------------------------------------------------------------------------------
 
 ### Advantages
@@ -106,6 +106,66 @@ Discussion
 - No out-of-the-box connection pooling.
 
 - Sqinn-Go is not a Golang `database/sql` Driver.
+
+
+Discussion
+------------------------------------------------------------------------------
+
+### Pure Go, almost
+
+Sqinn-Go is pure Go, as it does not use cgo, nor does it depend on third-party
+cgo packages. However, Sqinn-Go has a runtime dependency on Sqinn, which is a
+program written in C. Sqinn has to be installed separately on each machine
+where a Sqinn-Go application is executing. For this to work, Sqinn has to be 
+compiled for every target platform. As an alternative, pre-built Sqinn binaries
+for the most common platforms can be downloaded from the Sqinn releases page
+<https://github.com/cvilsmeier/sqinn/releases>.
+
+
+### No database/sql driver
+
+Database/sql is Go's default abstraction layer for SQL databases. It is widely
+used and there are many third-party packages built on top of it. Sqinn-Go does
+not implement the database/sql interfaces. The reason is that the sql package
+provides low-level function calls to prepare statements, bind parameters, fetch
+column values, and so on. Sqinn could do that, too. But, since for every
+function call, Sqinn-Go has to make a inter-process communication
+request/response roundtrip to a sqinn child process, this would be very slow.
+Instead, Sqinn-Go provides higher-level Exec/Query interfaces that should be
+used in favor of low-level fine-grained functions.
+
+
+### Concurrency
+
+Sqinn/Sqinn-Go performs well in non-concurrent as well as concurrent settings,
+as shown in [performance.md](performance.md). However, a single Sqinn instance
+should only be called from one goroutine. Exceptions are the Exec and Query
+methods, these are mutex'ed and goroutine safe. But, since Sqinn is inherently
+single-threaded, Exec and Query requests are served one-after-another.
+
+If you want true concurrency at the database level, you can spin up multiple
+Sqinn instances. You may even implement a connection pool. But be aware that
+when accessing a SQLite database concurrently, the dreaded SQLITE_BUSY error
+might occur.
+
+I would recommend the following: Have one Sqinn instance. You may call
+Exec/Query on that single Sqinn instance from as many goroutines as you want.
+For long-running tasks (VACUUM, BACKUP, etc), spin up a second Sqinn instance
+on demand, and terminate it once the long-running work is done. Use
+PRAGMA busy_timeout to avoid SQLITE_BUSY.
+
+
+### Only one active statement at a time
+
+A Sqinn instance allows only one active statement at a time. A
+statement is /active/ from the time it is prepared until it is finalized.
+Before preparing a new statement, you have to finalize the current statement
+first, otherwise Sqinn will respond with an error.
+
+This is why we recommend using Exec/Query: These methods do a complete
+prepare-finalize cycle and the caller can be sure that, once Exec/Query returns,
+no active statements are hanging around.
+
 
 
 License
