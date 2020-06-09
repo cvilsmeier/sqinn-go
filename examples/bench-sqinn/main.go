@@ -30,9 +30,11 @@ func benchUsers(sqinnPath, dbFile string, nusers int, bindRating bool) {
 	check(err)
 	// prepare schema
 	_, err = sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR, age INTEGER, rating REAL)")
+	check(err)
 	// insert users
 	t1 := time.Now()
 	_, err = sq.Exec("BEGIN TRANSACTION", 1, 0, nil)
+	check(err)
 	values := make([]interface{}, 0, nusers*4)
 	for i := 0; i < nusers; i++ {
 		id := i + 1
@@ -46,7 +48,9 @@ func benchUsers(sqinnPath, dbFile string, nusers int, bindRating bool) {
 		}
 	}
 	_, err = sq.Exec("INSERT INTO users (id, name, age, rating) VALUES (?,?,?,?)", nusers, 4, values)
+	check(err)
 	_, err = sq.ExecOne("COMMIT")
+	check(err)
 	t2 := time.Now()
 	// query users
 	colTypes := []byte{sqinn.ValInt, sqinn.ValText, sqinn.ValInt, sqinn.ValDouble}

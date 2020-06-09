@@ -119,7 +119,7 @@ func (sq *Sqinn) SqinnVersion(filename string) (string, error) {
 		return "", err
 	}
 	var version string
-	version, resp, err = decodeString(resp)
+	version, _, err = decodeString(resp)
 	if err != nil {
 		return "", err
 	}
@@ -140,7 +140,7 @@ func (sq *Sqinn) IoVersion() (byte, error) {
 		return 0, err
 	}
 	var version byte
-	version, resp, err = decodeByte(resp)
+	version, _, err = decodeByte(resp)
 	if err != nil {
 		return 0, err
 	}
@@ -160,7 +160,7 @@ func (sq *Sqinn) SqliteVersion(filename string) (string, error) {
 		return "", err
 	}
 	var version string
-	version, resp, err = decodeString(resp)
+	version, _, err = decodeString(resp)
 	if err != nil {
 		return "", err
 	}
@@ -337,7 +337,7 @@ func (sq *Sqinn) Changes() (int, error) {
 		return 0, err
 	}
 	var changes int
-	changes, resp, err = decodeInt32(resp)
+	changes, _, err = decodeInt32(resp)
 	if err != nil {
 		return 0, err
 	}
@@ -565,6 +565,9 @@ func (sq *Sqinn) Query(sql string, values []interface{}, colTypes []byte) ([]Row
 	req = append(req, encodeInt32(nparams)...)
 	var err error
 	req, err = sq.bindValues(req, values)
+	if err != nil {
+		return nil, err
+	}
 	ncols := len(colTypes)
 	req = append(req, encodeInt32(ncols)...)
 	req = append(req, colTypes...)

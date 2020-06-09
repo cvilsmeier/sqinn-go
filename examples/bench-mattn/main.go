@@ -115,6 +115,7 @@ func benchComplexSchema(dbFile string, nprofiles, nusers, nlocations int) {
 	tx, err := db.Begin()
 	check(err)
 	stmt, err := tx.Prepare("INSERT INTO profiles (id,name,active) VALUES(?,?,?)")
+	check(err)
 	for p := 0; p < nprofiles; p++ {
 		profileID := fmt.Sprintf("profile_%d", p)
 		name := fmt.Sprintf("ProfileGo %d", p)
@@ -130,6 +131,7 @@ func benchComplexSchema(dbFile string, nprofiles, nusers, nlocations int) {
 	tx, err = db.Begin()
 	check(err)
 	stmt, err = tx.Prepare("INSERT INTO users (id,profileId,name,active) VALUES(?,?,?,?)")
+	check(err)
 	for p := 0; p < nprofiles; p++ {
 		profileID := fmt.Sprintf("profile_%d", p)
 		for u := 0; u < nusers; u++ {
@@ -148,6 +150,7 @@ func benchComplexSchema(dbFile string, nprofiles, nusers, nlocations int) {
 	tx, err = db.Begin()
 	check(err)
 	stmt, err = tx.Prepare("INSERT INTO locations (id,userId,name,active) VALUES(?,?,?,?)")
+	check(err)
 	for p := 0; p < nprofiles; p++ {
 		for u := 0; u < nusers; u++ {
 			userID := fmt.Sprintf("user_%d_%d", p, u)
@@ -230,6 +233,7 @@ func benchConcurrent(dbFile string, nusers, nworkers int) {
 	tx, err := db.Begin()
 	check(err)
 	stmt, err := tx.Prepare("INSERT INTO users (id,name) VALUES(?,?)")
+	check(err)
 	for u := 0; u < nusers; u++ {
 		id := u + 1
 		name := fmt.Sprintf("User %d", u)
