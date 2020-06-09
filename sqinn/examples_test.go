@@ -2,16 +2,27 @@ package sqinn_test
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/cvilsmeier/sqinn-go/sqinn"
 )
 
+// NOTE: For running the examples you must have sqinn installed
+// and $SQINN_PATH must point to it.
+
 func Example_basic() {
+
+	// Find sqinn
+	sqinnPath := os.Getenv("SQINN_PATH")
+	if sqinnPath == "" {
+		log.Printf("SQINN_PATH not set, please install sqinn and set SQINN_PATH")
+		return
+	}
 
 	// Launch sqinn. Terminate at program exit
 	sq, _ := sqinn.Launch(sqinn.Options{
-		SqinnPath: os.Getenv("SQINN_PATH"),
+		SqinnPath: sqinnPath,
 	})
 	defer sq.Terminate()
 
@@ -31,20 +42,26 @@ func Example_basic() {
 	for _, row := range rows {
 		fmt.Printf("%d %q\n", row.Values[0].AsInt(), row.Values[1].AsString())
 	}
-
-	// Output:
+	// will print:
 	// 1 "Alice"
 	// 2 "Bob"
 }
 
 func Example_parameterBinding() {
-	// Launch
+	// Find sqinn
+	sqinnPath := os.Getenv("SQINN_PATH")
+	if sqinnPath == "" {
+		log.Printf("SQINN_PATH not set, please install sqinn and set SQINN_PATH")
+		return
+	}
+
+	// Launch sqinn.
 	sq, _ := sqinn.Launch(sqinn.Options{
-		SqinnPath: os.Getenv("SQINN_PATH"),
+		SqinnPath: sqinnPath,
 	})
 	defer sq.Terminate()
 
-	// Open database
+	// Open database.
 	sq.Open(":memory:")
 	defer sq.Close()
 
@@ -74,8 +91,7 @@ func Example_parameterBinding() {
 	for _, row := range rows {
 		fmt.Printf("%d %q\n", row.Values[0].AsInt(), row.Values[1].AsString())
 	}
-
-	// Output:
+	// will print:
 	// 1 "Alice"
 	// 2 "Bob"
 	// 3 ""

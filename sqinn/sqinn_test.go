@@ -8,10 +8,19 @@ import (
 	"github.com/cvilsmeier/sqinn-go/sqinn"
 )
 
+// NOTE: For running the tests you must have sqinn installed
+// and $SQINN_PATH must point to it.
+
 func TestOpenAndClose(t *testing.T) {
-	// launch sqinn
+	// find sqinn path
+	sqinnPath := os.Getenv("SQINN_PATH")
+	if sqinnPath == "" {
+		t.Logf("SQINN_PATH not set, will skip test")
+		t.SkipNow()
+	}
+	// launch
 	sq, err := sqinn.Launch(sqinn.Options{
-		SqinnPath: os.Getenv("SQINN_PATH"),
+		SqinnPath: sqinnPath,
 	})
 	assert(t, err == nil, "want ok but was %s", err)
 	assert(t, sq != nil, "want sq but was nil")
@@ -52,9 +61,15 @@ func TestOpenAndClose(t *testing.T) {
 }
 
 func TestColTypes(t *testing.T) {
+	// find sqinn path
+	sqinnPath := os.Getenv("SQINN_PATH")
+	if sqinnPath == "" {
+		t.Logf("SQINN_PATH not set, will skip test")
+		t.SkipNow()
+	}
 	// launch
 	sq, err := sqinn.Launch(sqinn.Options{
-		SqinnPath: os.Getenv("SQINN_PATH"),
+		SqinnPath: sqinnPath,
 	})
 	assert(t, sq != nil, "no sq")
 	assert(t, err == nil, "want ok but was %s", err)
@@ -142,18 +157,24 @@ func TestColTypes(t *testing.T) {
 func TestLaunchError(t *testing.T) {
 	// launching a non-existing binary must not work
 	sq, err := sqinn.Launch(sqinn.Options{
-		SqinnPath: "./testdata/sqinn.exe",
+		SqinnPath: "./does_surely_not_exist/sqinn.exe",
 	})
 	assert(t, sq == nil, "want sq == nil but was set")
 	assert(t, err != nil, "want err but was ok")
-	substr := "testdata"
+	substr := "does_surely_not_exist"
 	assert(t, strings.Contains(err.Error(), substr), "want %q but was %s", substr, err)
 }
 
 func TestLowLevelFunctions(t *testing.T) {
+	// find sqinn path
+	sqinnPath := os.Getenv("SQINN_PATH")
+	if sqinnPath == "" {
+		t.Logf("SQINN_PATH not set, will skip test")
+		t.SkipNow()
+	}
 	// launch
 	sq, err := sqinn.Launch(sqinn.Options{
-		SqinnPath: os.Getenv("SQINN_PATH"),
+		SqinnPath: sqinnPath,
 	})
 	assert(t, sq != nil, "no sq")
 	assert(t, err == nil, "want ok but was %s", err)
@@ -219,9 +240,15 @@ func TestLowLevelFunctions(t *testing.T) {
 }
 
 func TestMisuse(t *testing.T) {
+	// find sqinn path
+	sqinnPath := os.Getenv("SQINN_PATH")
+	if sqinnPath == "" {
+		t.Logf("SQINN_PATH not set, will skip test")
+		t.SkipNow()
+	}
 	// launch
 	sq, err := sqinn.Launch(sqinn.Options{
-		SqinnPath: os.Getenv("SQINN_PATH"),
+		SqinnPath: sqinnPath,
 	})
 	assert(t, sq != nil, "no sq")
 	assert(t, err == nil, "want ok but was %s", err)
