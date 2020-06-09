@@ -1,6 +1,9 @@
 
 ![Sqinn](logo-200.png "Sqinn")
 
+[![GoDoc Reference](https://godoc.org/github.com/cvilsmeier/sqinn-go?status.svg)](http://godoc.org/github.com/cvilsmeier/sqinn-go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cvilsmeier/sqinn-go)](https://goreportcard.com/report/github.com/cvilsmeier/sqinn-go)
+
 Sqinn-Go is a Go (Golang) library for accessing SQLite databases in pure Go.
 It uses Sqinn <https://github.com/cvilsmeier/sqinn> under the hood.
 
