@@ -1,16 +1,15 @@
 language: go
 
 go:
-  - 1.14.x
-
-pre_install:
-  - echo "this is pre_install"
-  - echo PATH is $PATH
-  - echo "HOME is $HOME"
+    - 1.14.x
 
 install:
-  - echo "this is install"
-  - echo PATH is $PATH
-  - echo "HOME is $HOME"
-  - sh .travis.install-sqinn.sh
+    - echo "this is install"
+    - echo PATH is $PATH
+    - echo "HOME is $HOME"
+    - sh .travis.install-sqinn.sh
+
+env:
+    global:
+        - SQINN_PATH: /tmp/sqinn-dist-1.0.0/linux_amd64/sqinn
     
