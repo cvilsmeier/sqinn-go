@@ -3,6 +3,14 @@ language: go
 go:
   - 1.14.x
 
+pre_install:
+  - echo "this is pre_install"
+  - echo PATH is $PATH
+  - echo "HOME is $HOME"
+
 install:
-  - .travis.install-sqinn.sh
+  - echo "this is install"
+  - echo PATH is $PATH
+  - echo "HOME is $HOME"
+  - sh .travis.install-sqinn.sh
     
