@@ -12,19 +12,9 @@ import (
 // and $SQINN_PATH must point to it.
 
 func TestOpenAndClose(t *testing.T) {
-	// find sqinn path
-	var cwd string
-	cwd, _ = os.Getwd()
-	t.Logf("cwd=%q", cwd)
-	sqinnPath := os.Getenv("SQINN_PATH")
-	t.Logf("sqinnPath=%q", sqinnPath)
-	if sqinnPath == "" {
-		t.Logf("SQINN_PATH not set, will skip test")
-		t.SkipNow()
-	}
 	// launch
 	sq, err := sqinn.Launch(sqinn.Options{
-		SqinnPath: sqinnPath,
+		SqinnPath: os.Getenv("SQINN_PATH"),
 	})
 	assert(t, err == nil, "want ok but was %s", err)
 	assert(t, sq != nil, "want sq but was nil")
@@ -75,19 +65,9 @@ func TestOpenAndClose(t *testing.T) {
 }
 
 func TestMustExecQuery(t *testing.T) {
-	// find sqinn path
-	var cwd string
-	cwd, _ = os.Getwd()
-	t.Logf("cwd=%q", cwd)
-	sqinnPath := os.Getenv("SQINN_PATH")
-	t.Logf("SQINN_PATH=%q", sqinnPath)
-	if sqinnPath == "" {
-		t.Logf("SQINN_PATH not set, will skip test")
-		t.SkipNow()
-	}
 	// launch
 	sq, err := sqinn.Launch(sqinn.Options{
-		SqinnPath: sqinnPath,
+		SqinnPath: os.Getenv("SQINN_PATH"),
 	})
 	assert(t, sq != nil, "no sq")
 	assert(t, err == nil, "want ok but was %s", err)
@@ -103,19 +83,9 @@ func TestMustExecQuery(t *testing.T) {
 }
 
 func TestColTypes(t *testing.T) {
-	// find sqinn path
-	var cwd string
-	cwd, _ = os.Getwd()
-	t.Logf("cwd=%q", cwd)
-	sqinnPath := os.Getenv("SQINN_PATH")
-	t.Logf("SQINN_PATH=%q", sqinnPath)
-	if sqinnPath == "" {
-		t.Logf("SQINN_PATH not set, will skip test")
-		t.SkipNow()
-	}
 	// launch
 	sq, err := sqinn.Launch(sqinn.Options{
-		SqinnPath: sqinnPath,
+		SqinnPath: os.Getenv("SQINN_PATH"),
 	})
 	assert(t, sq != nil, "no sq")
 	assert(t, err == nil, "want ok but was %s", err)
@@ -212,15 +182,9 @@ func TestLaunchError(t *testing.T) {
 }
 
 func TestLowLevelFunctions(t *testing.T) {
-	// find sqinn path
-	sqinnPath := os.Getenv("SQINN_PATH")
-	if sqinnPath == "" {
-		t.Logf("SQINN_PATH not set, will skip test")
-		t.SkipNow()
-	}
 	// launch
 	sq, err := sqinn.Launch(sqinn.Options{
-		SqinnPath: sqinnPath,
+		SqinnPath: os.Getenv("SQINN_PATH"),
 	})
 	assert(t, sq != nil, "no sq")
 	assert(t, err == nil, "want ok but was %s", err)
@@ -286,15 +250,9 @@ func TestLowLevelFunctions(t *testing.T) {
 }
 
 func TestMisuse(t *testing.T) {
-	// find sqinn path
-	sqinnPath := os.Getenv("SQINN_PATH")
-	if sqinnPath == "" {
-		t.Logf("SQINN_PATH not set, will skip test")
-		t.SkipNow()
-	}
 	// launch
 	sq, err := sqinn.Launch(sqinn.Options{
-		SqinnPath: sqinnPath,
+		SqinnPath: os.Getenv("SQINN_PATH"),
 	})
 	assert(t, sq != nil, "no sq")
 	assert(t, err == nil, "want ok but was %s", err)

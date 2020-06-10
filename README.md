@@ -50,6 +50,34 @@ func main() {
 ```
 
 
+Testing
+------------------------------------------------------------------------------
+
+Sqinn-Go comes with a large set of automated unit tests. Follow these steps to
+execute all tests on linux_amd64:
+
+Download and Install Sqinn
+
+	$ cd $HOME
+	$ curl -sL https://github.com/cvilsmeier/sqinn/releases/download/v1.0.0/sqinn-dist-1.0.0.tar.gz | tar xz
+	$ export SQINN_PATH=$HOME/sqinn-dist-1.0.0/linux_amd64/sqinn
+
+Get and test Sqinn-Go
+
+	$ go get -v -u github.com/cvilsmeier/sqinn-go/...
+	$ go test -v github.com/cvilsmeier/sqinn-go/...
+
+Check test coverage
+
+	$ go test -v github.com/cvilsmeier/sqinn-go/... -coverprofile=./cover.out
+	$ go tool cover -func=./cover.out	
+	$ go tool cover -html=./cover.out
+
+Test coverage is ~85% (as of 2020-06-10)
+	
+
+
+
 Usage
 ------------------------------------------------------------------------------
 
