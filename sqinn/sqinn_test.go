@@ -13,7 +13,11 @@ import (
 
 func TestOpenAndClose(t *testing.T) {
 	// find sqinn path
+	var cwd string
+	cwd, _ = os.Getwd()
+	t.Logf("cwd=%q", cwd)
 	sqinnPath := os.Getenv("SQINN_PATH")
+	t.Logf("sqinnPath=%q", sqinnPath)
 	if sqinnPath == "" {
 		t.Logf("SQINN_PATH not set, will skip test")
 		t.SkipNow()
