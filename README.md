@@ -21,7 +21,7 @@ import "github.com/cvilsmeier/sqinn-go/sqinn"
 
 // Simple sqinn-go usage. Error handling is left out for brevity.
 func main() {
-	
+
 	// Launch sqinn. Terminate at program exit
 	sq, _ := sqinn.Launch(sqinn.Options{})
 	defer sq.Terminate()
@@ -65,16 +65,16 @@ Download and Install Sqinn
 Get and test Sqinn-Go
 
 	$ go get -v -u github.com/cvilsmeier/sqinn-go/...
-	$ go test -v github.com/cvilsmeier/sqinn-go/...
+	$ go test github.com/cvilsmeier/sqinn-go/...
 
 Check test coverage
 
-	$ go test -v github.com/cvilsmeier/sqinn-go/... -coverprofile=./cover.out
-	$ go tool cover -func=./cover.out	
+	$ go test github.com/cvilsmeier/sqinn-go/... -coverprofile=./cover.out
+	$ go tool cover -func=./cover.out
 	$ go tool cover -html=./cover.out
 
 Test coverage is ~85% (as of 2020-06-10)
-	
+
 
 
 
