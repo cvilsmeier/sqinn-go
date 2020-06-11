@@ -13,6 +13,8 @@ func TestMarshalByte(t *testing.T) {
 	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err == nil, "wrong %v", err)
 	v, buf, err = decodeByte(buf)
+	assert(t, v == byte(0), "wrong %d", v)
+	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err != nil, "wrong %v", err)
 }
 
@@ -25,6 +27,8 @@ func TestMarshalBool(t *testing.T) {
 	assert(t, len(buf) == 0, "wrong %v", len(buf))
 	assert(t, err == nil, "wrong %v", err)
 	v, buf, err = decodeBool(buf)
+	assert(t, v == false, "wrong %v", v)
+	assert(t, len(buf) == 0, "wrong %v", len(buf))
 	assert(t, err != nil, "wrong %v", err)
 }
 
@@ -42,6 +46,8 @@ func TestMarshalInt32(t *testing.T) {
 	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err == nil, "wrong %v", err)
 	v, buf, err = decodeInt32(buf)
+	assert(t, v == int(0), "wrong %d", v)
+	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err != nil, "wrong %v", err)
 }
 
@@ -63,6 +69,8 @@ func TestMarshalInt64(t *testing.T) {
 	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err == nil, "wrong %v", err)
 	v, buf, err = decodeInt64(buf)
+	assert(t, v == int64(0), "wrong %d", v)
+	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err != nil, "wrong %v", err)
 }
 
@@ -85,6 +93,8 @@ func TestMarshalDouble(t *testing.T) {
 	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err == nil, "wrong %v", err)
 	v, buf, err = decodeDouble(buf)
+	assert(t, v == float64(0.0), "wrong %g", v)
+	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err != nil, "wrong %v", err)
 }
 
@@ -106,6 +116,8 @@ func TestMarshalString(t *testing.T) {
 	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err == nil, "wrong %v", err)
 	v, buf, err = decodeString(buf)
+	assert(t, len(v) == 0, "wrong %d", len(v))
+	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err != nil, "wrong %v", err)
 }
 
@@ -129,6 +141,8 @@ func TestMarshalBlob(t *testing.T) {
 	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err == nil, "wrong %v", err)
 	v, buf, err = decodeBlob(buf)
+	assert(t, len(v) == 0, "wrong %d", len(v))
+	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err != nil, "wrong %v", err)
 }
 
