@@ -4,7 +4,6 @@ go:
     - 1.14.x
 
 install:
-    - echo "this is install"
     - echo PATH is $PATH
     - echo "HOME is $HOME"
     - sh .travis.install-sqinn.sh
