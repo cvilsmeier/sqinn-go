@@ -1,12 +1,11 @@
 
-PERFORMANCE
+SQINN-GO PERFORMANCE
 ==============================================================================
 
-Performance tests show that Sqinn-Go performs slightly better than cgo based
-alternatives.
+Performance tests show that Sqinn-Go performance is roughly the same as cgo
+solutions.
 
-For benchmarks I used <https://github.com/mattn/go-sqlite3>. It's been around a
-long time, well tested, and widely used.
+For benchmarks I used `github.com/mattn/go-sqlite3` and `crawshaw.io/sqlite`.
 
 The benchmarking code can be found in the examples subdirectory. Please note
 that the mattn go-sqlite3 test code is commented out, to avoid having a

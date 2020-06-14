@@ -5,7 +5,7 @@ import (
 )
 
 // A Logger logs error and debug messages coming from the stderr
-// output of the sqinn subprocess.
+// output of the sqinn child process.
 type Logger interface {
 	Log(s string)
 }
@@ -14,8 +14,8 @@ type Logger interface {
 // log's standard logger.
 type StdLogger struct {
 
-	// Logger can be set to nil or to a log.Logger.
-	// If it is nil, log output will go to the default log output.
+	// Logger will be used for writing log outputs.
+	// If Logger is nil, the log package default output will be used.
 	Logger *log.Logger
 }
 

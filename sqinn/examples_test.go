@@ -20,7 +20,7 @@ func Example_basic() {
 		return
 	}
 
-	// Launch sqinn. Terminate at program exit
+	// Launch sqinn. Terminate at program exit.
 	sq, _ := sqinn.Launch(sqinn.Options{
 		SqinnPath: sqinnPath,
 	})
@@ -42,7 +42,7 @@ func Example_basic() {
 	for _, row := range rows {
 		fmt.Printf("%d %q\n", row.Values[0].AsInt(), row.Values[1].AsString())
 	}
-	// will print:
+	// Output:
 	// 1 "Alice"
 	// 2 "Bob"
 }
@@ -91,7 +91,7 @@ func Example_parameterBinding() {
 	for _, row := range rows {
 		fmt.Printf("%d %q\n", row.Values[0].AsInt(), row.Values[1].AsString())
 	}
-	// will print:
+	// Output:
 	// 1 "Alice"
 	// 2 "Bob"
 	// 3 ""

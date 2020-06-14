@@ -2,7 +2,7 @@ package sqinn
 
 import (
 	"fmt"
-	"strconv"
+	"math"
 )
 
 // byte marshalling
@@ -132,18 +132,32 @@ func decodeBlob(buf []byte) (_blob []byte, _buf []byte, _err error) {
 // double marshalling
 
 func encodeDouble(v float64) []byte {
-	s := strconv.FormatFloat(v, 'g', -1, 64)
-	return encodeString(s)
+	bv := math.Float64bits(v)
+	return []byte{
+		byte(bv >> 56),
+		byte(bv >> 48),
+		byte(bv >> 40),
+		byte(bv >> 32),
+		byte(bv >> 24),
+		byte(bv >> 16),
+		byte(bv >> 8),
+		byte(bv >> 0),
+	}
 }
 
 func decodeDouble(buf []byte) (float64, []byte, error) {
-	s, buf, err := decodeString(buf)
-	if err != nil {
-		return 0, nil, fmt.Errorf("cannot decodeDouble: %s", err)
+	if len(buf) < 8 {
+		return 0, nil, fmt.Errorf("cannot decodeDouble from a %d byte buffer", len(buf))
 	}
-	v, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return 0, nil, fmt.Errorf("cannot decodeDouble: %s", err)
-	}
+	bv := uint64(buf[0])<<56 |
+		uint64(buf[1])<<48 |
+		uint64(buf[2])<<40 |
+		uint64(buf[3])<<32 |
+		uint64(buf[4])<<24 |
+		uint64(buf[5])<<16 |
+		uint64(buf[6])<<8 |
+		uint64(buf[7])<<0
+	buf = buf[8:]
+	v := math.Float64frombits(bv)
 	return v, buf, nil
 }

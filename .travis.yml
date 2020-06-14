@@ -7,10 +7,10 @@ install:
     - echo PATH is $PATH
     - echo "HOME is $HOME"
     - sh .travis.install-sqinn.sh
-    - /tmp/sqinn-dist-1.0.0/linux_amd64/sqinn version
-    - /tmp/sqinn-dist-1.0.0/linux_amd64/sqinn test
+    - /tmp/sqinn-dist-1.1.0/linux_amd64/sqinn version
+    - /tmp/sqinn-dist-1.1.0/linux_amd64/sqinn test
 
 env:
     global:
-        - SQINN_PATH: /tmp/sqinn-dist-1.0.0/linux_amd64/sqinn
+        - SQINN_PATH: /tmp/sqinn-dist-1.1.0/linux_amd64/sqinn
     

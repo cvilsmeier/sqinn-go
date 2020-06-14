@@ -7,9 +7,9 @@ const (
 	ValNull   byte = 0
 	ValInt    byte = 1
 	ValInt64  byte = 2
-	ValDouble byte = 3
 	ValText   byte = 4
 	ValBlob   byte = 5
+	ValDouble byte = 6 // the IEEE variant
 )
 
 // An IntValue holds a nullable int value. The zero value is not set (a.k.a. NULL).

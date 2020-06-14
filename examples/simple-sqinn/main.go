@@ -4,50 +4,86 @@ A simple usage demo.
 package main
 
 import (
-	"log"
+	"flag"
+	"fmt"
 	"os"
 
 	"github.com/cvilsmeier/sqinn-go/sqinn"
 )
 
-// Simple sqinn-go usage. Error handling is left out. Parameter binding is also left out.
+// Simple sqinn-go usage. Error handling left out for brevity.
 func main() {
+	sqinnpath := os.Getenv("SQINN_PATH")
+	dbname := "./users.db"
+	flag.StringVar(&sqinnpath, "sqinn", sqinnpath, "path to sqinn")
+	flag.StringVar(&dbname, "db", dbname, "path to db file")
 
-	// Launch sqinn. Sqinn executable path is taken from environment.
+	// Launch sqinn.
 	sq, _ := sqinn.Launch(sqinn.Options{
-		SqinnPath: os.Getenv("SQINN_PATH"),
+		SqinnPath: sqinnpath,
 	})
+	// Terminate when program exists.
+	defer sq.Terminate()
 
 	// Open a database. Database file will be created if it does not exist.
-	sq.Open("./users.db")
+	sq.Open(dbname)
+	// Close when done.
+	defer sq.Close()
 
 	// Create a table.
 	sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
 
-	// Insert users.
+	// Insert user without parameters.
 	sq.ExecOne("INSERT INTO users (id, name) VALUES (1, 'Alice')")
-	sq.ExecOne("INSERT INTO users (id, name) VALUES (2, 'Bob')")
 
-	// Query users. Two columns: id (int) and name (string)
-	rows, _ := sq.Query("SELECT id, name FROM users ORDER BY id", nil, []byte{sqinn.ValInt, sqinn.ValText})
-	for _, row := range rows {
-		log.Printf("id=%d, name=%s", row.Values[0].AsInt(), row.Values[1].AsString())
-		// output:
-		// id=1, name=Alice
-		// id=2, name=Bob
+	// Insert three users in a transaction.
+	sq.ExecOne("BEGIN")
+	nusers := 3         // we want three users
+	nparamsPerUser := 2 // each user has 2 columns: id and name
+	paramValues := []interface{}{
+		2, "Bob", // values for first user
+		3, "Carol", // values for second user
+		4, "Dave", // values for third user
 	}
+	sq.Exec("INSERT INTO users (id, name) VALUES (?, ?)", nusers, nparamsPerUser, paramValues)
+	sq.ExecOne("COMMIT")
+
+	// Query all users. Two columns: id (int) and name (string)
+	rows, _ := sq.Query(
+		"SELECT id, name FROM users ORDER BY id",
+		nil,                                 // no query parameters
+		[]byte{sqinn.ValInt, sqinn.ValText}, // fetch id as int, name as string
+	)
+	for _, row := range rows {
+		fmt.Printf("found id=%d, name=%s\n", row.Values[0].AsInt(), row.Values[1].AsString())
+	}
+	// output:
+	// found id=1, name=Alice
+	// found id=2, name=Bob
+	// found id=3, name=Carol
+	// found id=4, name=Dave
+
+	// Query name for id 2
+	id := 2
+	rows, _ = sq.Query(
+		"SELECT name FROM users WHERE id = ?",
+		[]interface{}{id},     // WHERE id = 2
+		[]byte{sqinn.ValText}, // fetch name as string
+	)
+	for _, row := range rows {
+		fmt.Printf("id %d is %q\n", id, row.Values[0].AsString())
+	}
+	// output:
+	// id 2 is "Bob"
 
 	// Delete users.
-	change, _ := sq.ExecOne("DELETE FROM users")
-	log.Printf("deleted %d user(s)", change)
+	modCount, _ := sq.ExecOne("DELETE FROM users")
+	fmt.Printf("deleted %d rows\n", modCount)
 	// output:
-	// deleted 2 user(s)
+	// deleted 4 rows
 
-	// Close the database, we're done.
-	sq.Close()
-
-	// Terminate sqinn at exit. Not necessarily needed but good behavior.
-	sq.Terminate()
+	// Cleanup.
+	sq.ExecOne("DROP TABLE users")
 }
 
 // Launch sqinn with path
@@ -56,35 +92,4 @@ func launchWithPath() {
 		SqinnPath: "C:/projects/my_server/bin/sqinn.exe",
 	})
 	_ = sq
-}
-
-// Use logger
-func launchWithLogger() {
-	sq, _ := sqinn.Launch(sqinn.Options{
-		Logger: sqinn.StdLogger{},
-	})
-	_ = sq
-}
-
-// Insert three users.
-func insertUsers(sq *sqinn.Sqinn) {
-	sq.ExecOne("BEGIN")
-	nUsers := 3
-	nParamsPerUser := 2
-	sq.Exec("INSERT INTO users (id, name) VALUES (?, ?)", nUsers, nParamsPerUser, []interface{}{
-		1, "Alice",
-		2, "Bob",
-		3, nil,
-	})
-	sq.ExecOne("COMMIT")
-}
-
-// Query users where id < 42.
-func queryUsers(sq *sqinn.Sqinn) ([]sqinn.Row, error) {
-	rows, err := sq.Query(
-		"SELECT id, name FROM users WHERE id < ? ORDER BY name",
-		[]interface{}{42},                   // WHERE id < 42
-		[]byte{sqinn.ValInt, sqinn.ValText}, // two columns: int id and string name
-	)
-	return rows, err
 }

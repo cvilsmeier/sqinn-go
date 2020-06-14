@@ -9,14 +9,19 @@
 
 Sqinn-Go is a Go (Golang) library for accessing SQLite databases in pure Go.
 It uses Sqinn <https://github.com/cvilsmeier/sqinn> under the hood.
+It starts Sqinn as a child process (`os/exec`) and communicates with
+Sqinn over stdin/stdout/stderr. The Sqinn child process then does the SQLite
+work.
 
-If you want SQLite but do not want cgo, sqinn can be a solution.
+If you want SQLite but do not want cgo, Sqinn-Go can be a solution.
 
-Description
+
+Usage
 ------------------------------------------------------------------------------
 
-Sqinn-Go uses Sqinn for accessing SQLite database. It starts Sqinn as a child
-process (`os/exec`) and communicates with Sqinn over stdin/stdout/stderr.
+```
+$ go get -u github.com/cvilsmeier/sqinn-go/sqinn
+```
 
 ```go
 import "github.com/cvilsmeier/sqinn-go/sqinn"
@@ -24,7 +29,7 @@ import "github.com/cvilsmeier/sqinn-go/sqinn"
 // Simple sqinn-go usage. Error handling is left out for brevity.
 func main() {
 
-	// Launch sqinn. Terminate at program exit
+	// Launch sqinn. Terminate at program exit.
 	sq, _ := sqinn.Launch(sqinn.Options{})
 	defer sq.Terminate()
 
@@ -51,6 +56,36 @@ func main() {
 }
 ```
 
+Before running that program, Sqinn must be installed on your system. The
+most convenient way is to download a pre-built executable from
+<https://github.com/cvilsmeier/sqinn/releases> and put it somewhere on
+your `$PATH`, or `%PATH%` on Windows.
+
+If you want to store the Sqinn binary in a non-PATH folder, you can do that.
+But then you must specify it when opening a Sqinn connection:
+
+```go
+    // take from environment...
+    sq, _ := sqinn.New(sqinn.Options{
+        SqinnPath: os.Getenv("SQINN_PATH"),
+    })
+
+    // ...or set path directly
+    sq, _ := sqinn.New(sqinn.Options{
+        SqinnPath: "/path/to/sqinn",
+    })
+```
+
+If do not want to use a pre-built binary, you can compile Sqinn yourself. See
+<https://github.com/cvilsmeier/sqinn> for instructions.
+
+
+Sample code
+------------------------------------------------------------------------------
+
+For more examples, see directory `examples` or file `examples_test.go`. The
+godoc page contains examples also.
+
 
 Testing
 ------------------------------------------------------------------------------
@@ -66,46 +101,16 @@ Download and Install Sqinn
 
 Get and test Sqinn-Go
 
-	$ go get -v -u github.com/cvilsmeier/sqinn-go/...
-	$ go test github.com/cvilsmeier/sqinn-go/...
+	$ go get -v -u github.com/cvilsmeier/sqinn-go/sqinn
+	$ go test github.com/cvilsmeier/sqinn-go/sqinn
 
 Check test coverage
 
-	$ go test github.com/cvilsmeier/sqinn-go/... -coverprofile=./cover.out
+	$ go test github.com/cvilsmeier/sqinn-go/sqinn -coverprofile=./cover.out
 	$ go tool cover -func=./cover.out
 	$ go tool cover -html=./cover.out
 
 Test coverage is ~85% (as of 2020-06-10)
-
-
-
-
-Usage
-------------------------------------------------------------------------------
-
-Sqinn must be installed on your system. The easiest way is to download a
-pre-built executable from <https://github.com/cvilsmeier/sqinn/releases> and
-put it somewhere on your `$PATH`, or `%PATH%` on Windows.
-
-If you want to store the Sqinn binary in a non-path folder, you can do that.
-But then you must specify it when opening a Sqinn connection:
-
-```go
-
-    // use explicit path...
-    sq, _ := sqinn.New(sqinn.Options{
-        SqinnPath: "/path/to/sqinn",
-    })
-
-    // ...or take from environment
-    sq, _ := sqinn.New(sqinn.Options{
-        SqinnPath: os.Getenv("SQINN_PATH"),
-    })
-
-```
-
-If do not want to use a pre-built binary, you can compile Sqinn yourself. See
-<https://github.com/cvilsmeier/sqinn> for instructions.
 
 
 Pros and Cons
@@ -188,6 +193,19 @@ Sqinn will respond with an error.
 This is why we recommend using Exec/Query: These methods do a complete
 prepare-finalize cycle and the caller can be sure that, once Exec/Query
 returns, no active statements are hanging around.
+
+
+Changelog
+------------------------------------------------------------------------------
+
+### v1.0.0 (2020-06-10)
+
+- First version.
+
+
+### v1.1.0
+
+- Use IEEE 745 encoding for float64 values, needs sqinn v1.1.0 or higher.
 
 
 
