@@ -61,8 +61,8 @@ most convenient way is to download a pre-built executable from
 <https://github.com/cvilsmeier/sqinn/releases> and put it somewhere on
 your `$PATH`, or `%PATH%` on Windows.
 
-If you want to store the Sqinn binary in a non-PATH folder, you can do that.
-But then you must specify it when opening a Sqinn connection:
+If you want to store the Sqinn binary in a non-PATH folder, you must
+specify it when opening a Sqinn connection:
 
 ```go
     // take from environment...
@@ -76,15 +76,56 @@ But then you must specify it when opening a Sqinn connection:
     })
 ```
 
-If do not want to use a pre-built binary, you can compile Sqinn yourself. See
-<https://github.com/cvilsmeier/sqinn> for instructions.
+If do not want to use a pre-built Sqinn binary, you can compile Sqinn
+yourself. See <https://github.com/cvilsmeier/sqinn> for instructions.
+
+
+Pros and Cons
+------------------------------------------------------------------------------
+
+### Advantages
+
+- No need to have gcc installed on development machine.
+- Go cross compilation works.
+- Faster build speed than cgo (1s vs 3s for sample program).
+- Smaller binary size than cgo (2MB vs 10MB for sample program).
+
+
+### Disadvantages
+
+- No built-in connection pooling.
+- Sqinn-Go is not a Golang `database/sql` Driver.
 
 
 Sample code
 ------------------------------------------------------------------------------
 
 For more examples, see directory `examples` or file `examples_test.go`. The
-godoc page contains examples also.
+godoc page contains examples also. Even more sample code can be found in 
+the benchmark repository at <https://github.com/cvilsmeier/sqinn-go-bench>.
+
+
+Performance
+------------------------------------------------------------------------------
+
+Performance tests show that Sqinn-Go performance is roughly the same as cgo
+solutions, sometimes even better.
+
+For benchmarks I used `github.com/mattn/go-sqlite3` ('mattn')
+and `crawshaw.io/sqlite` ('craw'). Both are cgo libraries. The benchmark
+results are, lower is better, best is marked with (*):
+
+	Benchmark         mattn      craw      sqinn
+	--------------------------------------------------
+	simple/insert     2.8 s      2.1 s      1.5 s (*)
+	simple/query      2.3 s      1.3 s (*)  1.3 s (*)
+	complex/insert    2.0 s      1.8 s      1.7 s (*)
+	complex/query     1.4 s      1.1 s (*)  1.3 s
+	concurrent/2      1.3 s      0.9 s (*)  0.9 s (*)
+	concurrent/4      1.5 s      1.0 s (*)  1.2 s
+	concurrent/8      2.3 s      1.6 s      2.0 s (*)
+
+For details see <https://github.com/cvilsmeier/sqinn-go-bench>.
 
 
 Testing
@@ -111,29 +152,6 @@ Check test coverage
 	$ go tool cover -html=./cover.out
 
 Test coverage is ~85% (as of 2020-06-10)
-
-
-Pros and Cons
-------------------------------------------------------------------------------
-
-### Advantages
-
-- No need to have gcc installed on development machine.
-
-- Golang cross compilation works.
-
-- Faster build speed (1s vs 3s for sample program).
-
-- Smaller binary size (2MB vs 10MB for sample program).
-
-- Better performance than cgo solutions, see [performance.md](performance.md)
-
-
-### Disadvantages
-
-- No out-of-the-box connection pooling.
-
-- Sqinn-Go is not a Golang `database/sql` Driver.
 
 
 Discussion
@@ -203,7 +221,7 @@ Changelog
 - First version.
 
 
-### v1.1.0
+### v1.1.0 (2020-06-14)
 
 - Use IEEE 745 encoding for float64 values, needs sqinn v1.1.0 or higher.
 
