@@ -1,5 +1,5 @@
 /*
-A simple usage demo.
+A simple usage demo for sqinn-go.
 */
 package main
 
@@ -17,21 +17,22 @@ func main() {
 	dbname := "./users.db"
 	flag.StringVar(&sqinnpath, "sqinn", sqinnpath, "path to sqinn")
 	flag.StringVar(&dbname, "db", dbname, "path to db file")
+	flag.Parse()
 
-	// Launch sqinn.
+	// Launch sqinn, terminate when program exists.
 	sq, _ := sqinn.Launch(sqinn.Options{
 		SqinnPath: sqinnpath,
 	})
-	// Terminate when program exists.
 	defer sq.Terminate()
 
-	// Open a database. Database file will be created if it does not exist.
+	// Open a database. Database file will be created if it
+	// does not exist. Close when done.
 	sq.Open(dbname)
-	// Close when done.
 	defer sq.Close()
 
-	// Create a table.
+	// Create a table. Cleanup when done.
 	sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
+	defer sq.ExecOne("DROP TABLE users")
 
 	// Insert user without parameters.
 	sq.ExecOne("INSERT INTO users (id, name) VALUES (1, 'Alice')")
@@ -57,7 +58,7 @@ func main() {
 	for _, row := range rows {
 		fmt.Printf("found id=%d, name=%s\n", row.Values[0].AsInt(), row.Values[1].AsString())
 	}
-	// output:
+	// Output:
 	// found id=1, name=Alice
 	// found id=2, name=Bob
 	// found id=3, name=Carol
@@ -73,23 +74,12 @@ func main() {
 	for _, row := range rows {
 		fmt.Printf("id %d is %q\n", id, row.Values[0].AsString())
 	}
-	// output:
+	// Output:
 	// id 2 is "Bob"
 
 	// Delete users.
 	modCount, _ := sq.ExecOne("DELETE FROM users")
 	fmt.Printf("deleted %d rows\n", modCount)
-	// output:
+	// Output:
 	// deleted 4 rows
-
-	// Cleanup.
-	sq.ExecOne("DROP TABLE users")
-}
-
-// Launch sqinn with path
-func launchWithPath() {
-	sq, _ := sqinn.Launch(sqinn.Options{
-		SqinnPath: "C:/projects/my_server/bin/sqinn.exe",
-	})
-	_ = sq
 }
