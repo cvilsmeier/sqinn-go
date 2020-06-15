@@ -184,7 +184,7 @@ used in favor of low-level fine-grained functions.
 ### Concurrency
 
 Sqinn/Sqinn-Go performs well in non-concurrent as well as concurrent settings,
-as shown in [performance.md](performance.md). However, a single Sqinn instance
+as shown in the Performance section. However, a single Sqinn instance
 should only be called from one goroutine. Exceptions are the Exec and Query
 methods, these are mutex'ed and goroutine safe. But, since Sqinn is inherently
 single-threaded, Exec and Query requests are served one-after-another.
@@ -204,7 +204,7 @@ busy_timeout to avoid SQLITE_BUSY.
 ### Only one active statement at a time
 
 A Sqinn instance allows only one active statement at a time. A statement is
-/active/ from the time it is prepared until it is finalized.  Before preparing
+*active* from the time it is prepared until it is finalized.  Before preparing
 a new statement, you have to finalize the current statement first, otherwise
 Sqinn will respond with an error.
 
