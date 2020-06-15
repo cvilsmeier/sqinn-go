@@ -85,7 +85,7 @@ Pros and Cons
 
 ### Advantages
 
-- No need to have gcc installed on development machine.
+- No need to have gcc installed on development machines.
 - Go cross compilation works.
 - Faster build speed than cgo (1s vs 3s for sample program).
 - Smaller binary size than cgo (2MB vs 10MB for sample program).
@@ -95,6 +95,7 @@ Pros and Cons
 
 - No built-in connection pooling.
 - Sqinn-Go is not a Golang `database/sql` Driver.
+- Sqinn covers only a subset of SQLite's C APIs.
 
 
 Sample code
@@ -108,9 +109,8 @@ the benchmark repository at <https://github.com/cvilsmeier/sqinn-go-bench>.
 Performance
 ------------------------------------------------------------------------------
 
-Performance tests show that Sqinn-Go performance is roughly the same as cgo
-solutions, depending on the use case and on the cgo library that Sqinn-Go is
-compared to.
+Performance tests show that Sqinn-Go performance is comparable to cgo
+solutions, depending on the use case.
 
 For benchmarks I used `github.com/mattn/go-sqlite3` and `crawshaw.io/sqlite`.
 Numbers are given in milliseconds, lower numbers are better.
