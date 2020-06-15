@@ -109,23 +109,29 @@ Performance
 ------------------------------------------------------------------------------
 
 Performance tests show that Sqinn-Go performance is roughly the same as cgo
-solutions, sometimes even better.
+solutions, depending on the use case and on the cgo library that Sqinn-Go is
+compared to.
 
-For benchmarks I used `github.com/mattn/go-sqlite3` ('mattn')
-and `crawshaw.io/sqlite` ('craw'). Both are cgo libraries. The benchmark
-results are, lower is better, best is marked with (*):
+For benchmarks I used `github.com/mattn/go-sqlite3` and `crawshaw.io/sqlite`.
+Numbers are given in milliseconds, lower numbers are better.
 
-	Benchmark         mattn      craw      sqinn
-	--------------------------------------------------
-	simple/insert     2.8 s      2.1 s      1.5 s (*)
-	simple/query      2.3 s      1.3 s (*)  1.3 s (*)
-	complex/insert    2.0 s      1.8 s      1.7 s (*)
-	complex/query     1.4 s      1.1 s (*)  1.3 s
-	concurrent/2      1.3 s      0.9 s (*)  0.9 s (*)
-	concurrent/4      1.5 s      1.0 s (*)  1.2 s
-	concurrent/8      2.3 s      1.6 s      2.0 s (*)
+                       mattn  crawshaw     sqinn
+    simple/insert       2901      2140      1563
+    simple/query        2239      1287      1390
+    complex/insert      2066      1817      1683
+    complex/query       1458      1129      1338
+    many/N=10             97        78       134
+    many/N=100           246       194       276
+    many/N=1000         1797      1240      1436
+    large/N=2000         119        87       341
+    large/N=4000         361       322       760
+    large/N=8000         701       650      1531
+    concurrent/N=2      1332       865       951    
+    concurrent/N=4      1505       989      1207    
+    concurrent/N=8      2347      1557      2044     
 
-For details see <https://github.com/cvilsmeier/sqinn-go-bench>.
+
+See <https://github.com/cvilsmeier/sqinn-go-bench> for details.
 
 
 Testing
