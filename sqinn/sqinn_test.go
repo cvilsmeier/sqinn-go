@@ -82,6 +82,39 @@ func TestMustExecQuery(t *testing.T) {
 	sq.MustQuery("SELECT 1", nil, nil)
 }
 
+func TestExecAndQueryWithErrors(t *testing.T) {
+	// launch
+	sq, err := sqinn.Launch(sqinn.Options{
+		SqinnPath: os.Getenv("SQINN_PATH"),
+	})
+	assert(t, sq != nil, "no sq")
+	assert(t, err == nil, "want ok but was %s", err)
+	defer sq.Terminate()
+	// open db
+	err = sq.Open(":memory:")
+	assert(t, err == nil, "want ok but was %s", err)
+	defer sq.Close()
+	// create a table
+	sq.MustExecOne("CREATE TABLE users (name VARCHAR NOT NULL)")
+	// insert user with wrong sql, must fail
+	_, err = sq.ExecOne("INSERT INTO users (id, name, age) VALUES (1, 'Alice', 27)")
+	assert(t, err != nil, "want err but was ok")
+	// insert user with wrong param (NOT NULL!!), must fail
+	_, err = sq.Exec("INSERT INTO users (name) VALUES (?)", 1, 1, []interface{}{nil})
+	assert(t, err != nil, "want err but was ok")
+	// insert user with good sql, must succeed
+	_, err = sq.ExecOne("INSERT INTO users (name) VALUES ('Alice')")
+	assert(t, err == nil, "want ok but was %v", err)
+	// query users with wrong sql, must fail
+	rows, err := sq.Query("SELECT id, name, age FROM users ORDER BY id", nil, nil)
+	assert(t, err != nil, "want err but was ok")
+	assert(t, len(rows) == 0, "want no rows but was %v", len(rows))
+	// query users with good sql, must succeed
+	rows, err = sq.Query("SELECT name FROM users ORDER BY name", nil, []byte{sqinn.ValText})
+	assert(t, err == nil, "want ok but was %v", err)
+	assert(t, len(rows) == 1, "want 1 row but was %v", len(rows))
+}
+
 func TestColTypes(t *testing.T) {
 	// launch
 	sq, err := sqinn.Launch(sqinn.Options{
