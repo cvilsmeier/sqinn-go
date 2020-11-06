@@ -222,15 +222,14 @@ returns, no active statements are hanging around.
 Changelog
 ------------------------------------------------------------------------------
 
-### v1.0.0 (2020-06-10)
-
-- First version.
-
-
 ### v1.1.0 (2020-06-14)
 
 - Use IEEE 745 encoding for float64 values, needs sqinn v1.1.0 or higher.
 
+
+### v1.0.0 (2020-06-10)
+
+- First version.
 
 
 License
