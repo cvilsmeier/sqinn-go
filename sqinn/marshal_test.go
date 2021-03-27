@@ -1,6 +1,8 @@
 package sqinn
 
 import (
+	"bytes"
+	"math"
 	"testing"
 )
 
@@ -191,4 +193,55 @@ func assert(t testing.TB, cond bool, format string, args ...interface{}) {
 	if !cond {
 		t.Fatalf(format, args...)
 	}
+}
+
+func BenchmarkMarshalFlot64(b *testing.B) {
+	values := make([]float64, 1000)
+	for i := 0; i < len(values); i++ {
+		values[i] = 13.1 * float64(i)
+	}
+	b.Run("WithByteSlice", func(b *testing.B) {
+		marshalFunc := func(value float64) []byte {
+			bits := math.Float64bits(value)
+			return []byte{
+				byte(bits >> 56),
+				byte(bits >> 48),
+				byte(bits >> 40),
+				byte(bits >> 32),
+				byte(bits >> 24),
+				byte(bits >> 16),
+				byte(bits >> 8),
+				byte(bits >> 0),
+			}
+		}
+		for i := 0; i < b.N; i++ {
+			all := make([]byte, 0, 10000)
+			for _, value := range values {
+				data := marshalFunc(value)
+				all = append(all, data...)
+			}
+		}
+	})
+	b.Run("WithBuf", func(b *testing.B) {
+		marshalFunc := func(value float64) []byte {
+			bits := math.Float64bits(value)
+			return []byte{
+				byte(bits >> 56),
+				byte(bits >> 48),
+				byte(bits >> 40),
+				byte(bits >> 32),
+				byte(bits >> 24),
+				byte(bits >> 16),
+				byte(bits >> 8),
+				byte(bits >> 0),
+			}
+		}
+		for i := 0; i < b.N; i++ {
+			var buf bytes.Buffer
+			for _, value := range values {
+				data := marshalFunc(value)
+				buf.Write(data)
+			}
+		}
+	})
 }

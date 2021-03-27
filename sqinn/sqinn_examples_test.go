@@ -167,8 +167,10 @@ func Example_sqliteSpecialties() {
 	sq.MustExecOne("PRAGMA synchronous = NORMAL")
 
 	// Make a backup into a temp file
+	filename := os.TempDir() + "/db_backup.sqlite"
+	os.Remove(filename) // remove in case it exists, sqlite does not want to overwrite
 	sq.MustExec("VACUUM INTO ?", 1, 1, []interface{}{
-		os.TempDir() + "/db_backup.sqlite",
+		filename,
 	})
 
 	// Output:

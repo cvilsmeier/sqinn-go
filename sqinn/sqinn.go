@@ -524,7 +524,7 @@ func (sq *Sqinn) Exec(sql string, niterations, nparams int, values []interface{}
 	}
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
-	req := make([]byte, 0, 10+len(sql))
+	req := make([]byte, 0, len(sql)+10*len(values))
 	req = append(req, fcExec)
 	req = append(req, encodeString(sql)...)
 	req = append(req, encodeInt32(niterations)...)
@@ -579,7 +579,7 @@ func (sq *Sqinn) MustExec(sql string, niterations, nparams int, values []interfa
 func (sq *Sqinn) Query(sql string, params []interface{}, colTypes []byte) ([]Row, error) {
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
-	req := make([]byte, 0, 64+len(sql))
+	req := make([]byte, 0, len(sql)+8*len(params))
 	req = append(req, fcQuery)
 	req = append(req, encodeString(sql)...)
 	nparams := len(params)
