@@ -8,8 +8,11 @@ import (
 	"github.com/cvilsmeier/sqinn-go/sqinn"
 )
 
-// NOTE: For running the tests you must have sqinn installed
+// NOTE: For running the tests you must have
+// sqinn(.exe) binary installed
 // and $SQINN_PATH must point to it.
+// You can download pre-built sqinn binaries from
+// https://github.com/cvilsmeier/sqinn/releases
 
 func TestOpenAndClose(t *testing.T) {
 	// launch
@@ -201,6 +204,60 @@ func TestColTypes(t *testing.T) {
 	)
 	assert(t, err == nil, "want ok but was %s", err)
 	assert(t, len(rows) == 0, "want len(rows) 0 but was %d", len(rows))
+}
+
+func TestNullValues(t *testing.T) {
+	// launch
+	sq, err := sqinn.Launch(sqinn.Options{
+		SqinnPath: os.Getenv("SQINN_PATH"),
+	})
+	assert(t, sq != nil, "no sq")
+	assert(t, err == nil, "want ok but was %s", err)
+	defer sq.Terminate()
+	// open db
+	err = sq.Open(":memory:")
+	assert(t, err == nil, "want ok but was %s", err)
+	defer sq.Close()
+	// create table with all possible types
+	_, err = sq.ExecOne("CREATE TABLE tabl (i INTEGER, i64 BIGINT, f64 REAL, s TEXT, b BLOB)")
+	assert(t, err == nil, "want ok but was %s", err)
+	// insert row with NULL values
+	mods, err := sq.Exec(
+		"INSERT INTO tabl (i, i64, f64, s, b) VALUES(?, ?, ?, ?, ?)", // sql
+		1, // insert 1 row
+		5, // row has 5 columns
+		[]interface{}{
+			nil, // int i
+			nil, // int64 i64
+			nil, // float64 f64
+			nil, // string s
+			nil, // blob b
+		},
+	)
+	assert(t, err == nil, "want ok but was %s", err)
+	assert(t, len(mods) == 1, "want 1 mods but was %d", len(mods))
+	assert(t, mods[0] == 1, "want mod 1 but was %d", mods[0])
+	// query all rows
+	rows, err := sq.Query(
+		"SELECT i, i64, f64, s, b FROM tabl ORDER BY i",
+		nil, // no query parameters
+		[]byte{
+			sqinn.ValInt,    // query 'i INTEGER' as int
+			sqinn.ValInt64,  // query 'i64 BIGINT' as int64
+			sqinn.ValDouble, // query 'f64 REAL' as float64
+			sqinn.ValText,   // query 's TEXT' as string
+			sqinn.ValBlob,   // query 'b BLOB' as []byte
+		}, // 5 column types
+	)
+	assert(t, err == nil, "want ok but was %s", err)
+	assert(t, len(rows) == 1, "want 1 row but was %d", len(rows))
+	values := rows[0].Values
+	assert(t, len(values) == 5, "want 5 values but was %d", len(values))
+	assert(t, !values[0].Int.Set, "want i NULL")
+	assert(t, !values[1].Int64.Set, "want i64 NULL")
+	assert(t, !values[2].Double.Set, "want f64 NULL")
+	assert(t, !values[3].String.Set, "want s NULL")
+	assert(t, !values[4].Blob.Set, "want b NULL")
 }
 
 func TestLaunchError(t *testing.T) {
@@ -396,5 +453,77 @@ func assert(t testing.TB, cond bool, format string, args ...interface{}) {
 	t.Helper()
 	if !cond {
 		t.Fatalf(format, args...)
+	}
+}
+
+func BenchmarkValueBinding(b *testing.B) {
+	bindFunc := func(value interface{}) byte {
+		switch value.(type) {
+		case nil:
+			return sqinn.ValNull
+		case int:
+			return sqinn.ValInt
+		case int64:
+			return sqinn.ValInt64
+		case float64:
+			return sqinn.ValDouble
+		case string:
+			return sqinn.ValText
+		case []byte:
+			return sqinn.ValBlob
+		}
+		return sqinn.ValNull
+	}
+	intValue := int(1)
+	int64Value := int64(1)
+	float64Value := float64(1)
+	stringValue := "1"
+	blobValue := []byte{1}
+	values := []interface{}{nil, intValue, int64Value, float64Value, stringValue, blobValue}
+	for i := 0; i < b.N; i++ {
+		for _, value := range values {
+			valType := bindFunc(value)
+			_ = valType
+		}
+	}
+}
+
+func BenchmarkValueBindingWithPointers(b *testing.B) {
+	bindFunc := func(value interface{}) byte {
+		switch value.(type) {
+		case nil:
+			return sqinn.ValNull
+		case int:
+			return sqinn.ValInt
+		case *int:
+			return sqinn.ValInt
+		case int64:
+			return sqinn.ValInt64
+		case *int64:
+			return sqinn.ValInt
+		case float64:
+			return sqinn.ValDouble
+		case *float64:
+			return sqinn.ValDouble
+		case string:
+			return sqinn.ValText
+		case *string:
+			return sqinn.ValText
+		case []byte:
+			return sqinn.ValBlob
+		}
+		return sqinn.ValNull
+	}
+	intValue := int(1)
+	int64Value := int64(1)
+	float64Value := float64(1)
+	stringValue := "1"
+	blobValue := []byte{1}
+	values := []interface{}{nil, intValue, &intValue, int64Value, &int64Value, float64Value, &float64Value, stringValue, &stringValue, blobValue}
+	for i := 0; i < b.N; i++ {
+		for _, value := range values {
+			valType := bindFunc(value)
+			_ = valType
+		}
 	}
 }

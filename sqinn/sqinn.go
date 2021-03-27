@@ -94,6 +94,15 @@ func Launch(options Options) (*Sqinn, error) {
 	return sq, nil
 }
 
+// MustLaunch is like Launch except it panics on error.
+func MustLaunch(options Options) *Sqinn {
+	sq, err := Launch(options)
+	if err != nil {
+		panic(err)
+	}
+	return sq
+}
+
 func (sq *Sqinn) run(logger Logger) {
 	sc := bufio.NewScanner(sq.serr)
 	for sc.Scan() {
@@ -188,6 +197,14 @@ func (sq *Sqinn) Open(filename string) error {
 		return err
 	}
 	return nil
+}
+
+// MustOpen is like Open except it panics on error.
+func (sq *Sqinn) MustOpen(filename string) {
+	err := sq.Open(filename)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // Prepare prepares a statement, using the provided sql string.
@@ -541,30 +558,34 @@ func (sq *Sqinn) MustExec(sql string, niterations, nparams int, values []interfa
 }
 
 // Query executes a SQL statement and returns all rows.
-// Query is used mostly for SELECT statements.
+// Query is used for SELECT statements.
 //
-// The values argument holds a list of bind parameters. Values must be of type
-// int, int64, float64, string, blob or nil.
+// The params argument holds a list of bind parameters. Values must be of type
+// int, int64, float64, string, []byte or nil.
 //
 // The colTypes argument holds a list of column types that the query yields.
 //
 // Query returns all resulting rows at once. There is no way
 // to interrupt a Query while it is running. If a Query yields more data
-// than can fit into memory, the behavior is undefined, most likely an out-of-memory
-// condition will crash your program. It is up to the caller to make sure
-// that all queried data fits into memory. The sql 'LIMIT' operator may be helpful.
+// than can fit into memory, the behavior is undefined, most likely an
+// out-of-memory condition will crash your program. It is up to the caller to
+// make sure that all queried data fits into memory. The sql 'LIMIT' operator
+// may be helpful.
+//
+// Each returned Row contains a slice of values. The number of values per row is
+// equal to the length of colTypes.
 //
 // If an error occurs, it will return (nil, err).
-func (sq *Sqinn) Query(sql string, values []interface{}, colTypes []byte) ([]Row, error) {
+func (sq *Sqinn) Query(sql string, params []interface{}, colTypes []byte) ([]Row, error) {
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
-	req := make([]byte, 0, 10+len(sql))
+	req := make([]byte, 0, 64+len(sql))
 	req = append(req, fcQuery)
 	req = append(req, encodeString(sql)...)
-	nparams := len(values)
+	nparams := len(params)
 	req = append(req, encodeInt32(nparams)...)
 	var err error
-	req, err = sq.bindValues(req, values)
+	req, err = sq.bindValues(req, params)
 	if err != nil {
 		return nil, err
 	}

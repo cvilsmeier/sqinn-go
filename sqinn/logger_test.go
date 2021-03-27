@@ -12,7 +12,7 @@ func TestStdLogger(t *testing.T) {
 	var l sqinn.StdLogger
 	l.Log("foo")
 	// Output:
-	// foo
+	// foo2
 	l.Logger = log.New(ioutil.Discard, "", log.LstdFlags)
 	l.Log("foo")
 	// Output:

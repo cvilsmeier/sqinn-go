@@ -101,7 +101,7 @@ Pros and Cons
 Sample code
 ------------------------------------------------------------------------------
 
-For more examples, see directory `examples` or file `examples_test.go`. The
+For more examples, see directory `examples` or file `sqinn_examples_test.go`. The
 godoc page contains examples also. Even more sample code can be found in 
 the benchmark repository at <https://github.com/cvilsmeier/sqinn-go-bench>.
 
@@ -143,8 +143,8 @@ execute all tests on linux_amd64:
 Download and Install Sqinn
 
 	$ cd $HOME
-	$ curl -sL https://github.com/cvilsmeier/sqinn/releases/download/v1.0.0/sqinn-dist-1.0.0.tar.gz | tar xz
-	$ export SQINN_PATH=$HOME/sqinn-dist-1.0.0/linux_amd64/sqinn
+	$ curl -sL https://github.com/cvilsmeier/sqinn/releases/download/v1.1.6/sqinn-dist-1.1.6.tar.gz | tar xz
+	$ export SQINN_PATH=$HOME/sqinn-dist-1.1.6/linux_amd64/sqinn
 
 Get and test Sqinn-Go
 
@@ -157,7 +157,7 @@ Check test coverage
 	$ go tool cover -func=./cover.out
 	$ go tool cover -html=./cover.out
 
-Test coverage is ~85% (as of 2020-06-10)
+Test coverage is ~85% (as of 2021-03-27)
 
 
 Discussion
@@ -170,7 +170,7 @@ cgo packages. However, Sqinn-Go has a runtime dependency on Sqinn, which is a
 program written in C. Sqinn has to be installed separately on each machine
 where a Sqinn-Go application is executing. For this to work, Sqinn has to be
 compiled for every target platform. As an alternative, pre-built Sqinn binaries
-for the most common platforms can be downloaded from the Sqinn releases page
+for common platforms can be downloaded from the Sqinn releases page
 <https://github.com/cvilsmeier/sqinn/releases>.
 
 
@@ -198,10 +198,10 @@ single-threaded, Exec and Query requests are served one-after-another.
 If you want true concurrency at the database level, you can spin up multiple
 Sqinn instances. You may even implement a connection pool. But be aware that
 when accessing a SQLite database concurrently, the dreaded SQLITE_BUSY error
-might occur.
+might occur. The PRAGMA busy_timeout might help to avoid SQLITE_BUSY errors.
 
 We recommend the following: Have one Sqinn instance. You may call Exec/Query on
-that single Sqinn instance from as many goroutines as you want.  For
+that single Sqinn instance from as many goroutines as you want. For
 long-running tasks (VACUUM, BACKUP, etc), spin up a second Sqinn instance on
 demand, and terminate it once the long-running work is done. Use PRAGMA
 busy_timeout to avoid SQLITE_BUSY.
@@ -221,6 +221,12 @@ returns, no active statements are hanging around.
 
 Changelog
 ------------------------------------------------------------------------------
+
+### v1.1.1 (2021-03-27)
+
+- Added example for handling NULL values
+- Added more docs for Values
+
 
 ### v1.1.0 (2020-06-14)
 

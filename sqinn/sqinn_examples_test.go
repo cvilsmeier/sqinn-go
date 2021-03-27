@@ -96,3 +96,49 @@ func Example_parameterBinding() {
 	// 2 "Bob"
 	// 3 ""
 }
+
+func Example_handlingNullValues() {
+	// Launch sqinn. Env SQINN_PATH must point to sqinn binary.
+	sq := sqinn.MustLaunch(sqinn.Options{
+		SqinnPath: os.Getenv("SQINN_PATH"),
+	})
+	defer sq.Terminate()
+
+	// Open database.
+	sq.MustOpen(":memory:")
+	defer sq.Close()
+
+	// Create table
+	sq.MustExecOne("CREATE TABLE names (val TEXT)")
+
+	// Insert 2 rows, the first is non-NULL, the second is NULL
+	sq.MustExecOne("BEGIN")
+	sq.MustExec(
+		"INSERT INTO names (val) VALUES (?)",
+		2, // insert 2 rows
+		1, // each row has 1 column
+		[]interface{}{
+			"wombat", // first row is 'wombat'
+			nil,      // second row is NULL
+		},
+	)
+	sq.MustExecOne("COMMIT")
+
+	// Query rows
+	rows := sq.MustQuery(
+		"SELECT val FROM names ORDER BY val",
+		nil,                   // no query parameters
+		[]byte{sqinn.ValText}, // one column of type TEXT
+	)
+	for _, row := range rows {
+		stringValue := row.Values[0].String
+		if stringValue.IsNull() {
+			fmt.Printf("NULL\n")
+		} else {
+			fmt.Printf("%q\n", stringValue.Value)
+		}
+	}
+	// Output:
+	// NULL
+	// "wombat"
+}

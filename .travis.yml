@@ -1,18 +1,18 @@
 language: go
 
 go:
-    - 1.13.x
     - 1.14.x
     - 1.15.x
+    - 1.16.x
 
 install:
     - echo PATH is $PATH
     - echo "HOME is $HOME"
     - sh .travis.install-sqinn.sh
-    - /tmp/sqinn-dist-1.1.2/linux_amd64/sqinn version
-    - /tmp/sqinn-dist-1.1.2/linux_amd64/sqinn test
+    - /tmp/sqinn-dist-1.1.6/linux_amd64/sqinn version
+    - /tmp/sqinn-dist-1.1.6/linux_amd64/sqinn test
 
 env:
     global:
-        - SQINN_PATH: /tmp/sqinn-dist-1.1.2/linux_amd64/sqinn
+        - SQINN_PATH: /tmp/sqinn-dist-1.1.6/linux_amd64/sqinn
     
