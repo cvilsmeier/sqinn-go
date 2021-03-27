@@ -79,7 +79,7 @@ specify it when opening a Sqinn connection:
 If do not want to use a pre-built Sqinn binary, you can compile Sqinn
 yourself. See <https://github.com/cvilsmeier/sqinn> for instructions.
 
-For more usage examples, see `sqinn/sqinn_examples_test.go`.
+For more usage examples, see file `sqinn/sqinn_examples_test.go`.
 
 
 Pros and Cons
