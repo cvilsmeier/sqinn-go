@@ -142,3 +142,34 @@ func Example_handlingNullValues() {
 	// NULL
 	// "wombat"
 }
+
+func Example_sqliteSpecialties() {
+	// Launch sqinn. Env SQINN_PATH must point to sqinn binary.
+	sq := sqinn.MustLaunch(sqinn.Options{
+		SqinnPath: os.Getenv("SQINN_PATH"),
+	})
+	defer sq.Terminate()
+
+	// Open database.
+	sq.MustOpen(":memory:")
+	defer sq.Close()
+
+	// Enable foreign keys, see https://sqlite.org/pragma.html#pragma_foreign_keys
+	sq.MustExecOne("PRAGMA foreign_keys = 1")
+
+	// Set busy_timeout, see https://sqlite.org/pragma.html#pragma_busy_timeout
+	sq.MustExecOne("PRAGMA busy_timeout = 10000")
+
+	// Enable WAL mode, see https://sqlite.org/pragma.html#pragma_journal_mode
+	sq.MustExecOne("PRAGMA journal_mode = WAL")
+
+	// Enable NORMAL sync, see https://sqlite.org/pragma.html#pragma_synchronous
+	sq.MustExecOne("PRAGMA synchronous = NORMAL")
+
+	// Make a backup into a temp file
+	sq.MustExec("VACUUM INTO ?", 1, 1, []interface{}{
+		os.TempDir() + "/db_backup.sqlite",
+	})
+
+	// Output:
+}
