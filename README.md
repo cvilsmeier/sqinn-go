@@ -79,6 +79,8 @@ specify it when opening a Sqinn connection:
 If do not want to use a pre-built Sqinn binary, you can compile Sqinn
 yourself. See <https://github.com/cvilsmeier/sqinn> for instructions.
 
+For more usage examples, see `sqinn/sqinn_examples_test.go`.
+
 
 Pros and Cons
 ------------------------------------------------------------------------------
@@ -96,14 +98,6 @@ Pros and Cons
 - No built-in connection pooling.
 - Sqinn-Go is not a Golang `database/sql` Driver.
 - Sqinn covers only a subset of SQLite's C APIs.
-
-
-Sample code
-------------------------------------------------------------------------------
-
-For more examples, see directory `examples` or file `sqinn_examples_test.go`. The
-godoc page contains examples also. Even more sample code can be found in 
-the benchmark repository at <https://github.com/cvilsmeier/sqinn-go-bench>.
 
 
 Performance
@@ -224,8 +218,9 @@ Changelog
 
 ### v1.1.1 (2021-03-27)
 
-- Added example for handling NULL values
 - Added more docs for Values
+- Added example for handling NULL values
+- Added example for sqlite specialties
 
 
 ### v1.1.0 (2020-06-14)
