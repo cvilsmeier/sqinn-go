@@ -218,7 +218,7 @@ Changelog
 
 ### v1.1.2 (2021-05-27)
 
-- Fixed int32 marshalling for negative numbers
+- Fixed negative int32 marshalling
 
 
 ### v1.1.1 (2021-03-27)
