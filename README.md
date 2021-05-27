@@ -216,6 +216,11 @@ returns, no active statements are hanging around.
 Changelog
 ------------------------------------------------------------------------------
 
+### v1.1.2 (2021-05-27)
+
+- Fixed int32 marshalling for negative numbers
+
+
 ### v1.1.1 (2021-03-27)
 
 - Added more docs for Values

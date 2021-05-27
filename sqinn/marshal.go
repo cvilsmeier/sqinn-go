@@ -42,12 +42,12 @@ func decodeInt32(buf []byte) (int, []byte, error) {
 	if len(buf) < 4 {
 		return 0, nil, fmt.Errorf("cannot decodeInt32 from a %d byte buffer", len(buf))
 	}
-	v := int(buf[0])<<24 |
-		int(buf[1])<<16 |
-		int(buf[2])<<8 |
-		int(buf[3])<<0
+	v := int32(buf[0])<<24 |
+		int32(buf[1])<<16 |
+		int32(buf[2])<<8 |
+		int32(buf[3])<<0
 	buf = buf[4:]
-	return v, buf, nil
+	return int(v), buf, nil
 }
 
 // int64 marshalling

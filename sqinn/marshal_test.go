@@ -44,13 +44,59 @@ func TestMarshalInt32(t *testing.T) {
 	assert(t, buf[3] == 0xFF, "wrong 0x%X", buf[3])
 	var err error
 	v, buf, err = decodeInt32(buf)
-	assert(t, v == int(0x7FFFFFFF), "wrong %d", v)
+	assert(t, v == 0x7FFFFFFF, "wrong %d", v)
+	assert(t, v == 2147483647, "wrong %d", v)
 	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err == nil, "wrong %v", err)
 	v, buf, err = decodeInt32(buf)
 	assert(t, v == int(0), "wrong %d", v)
 	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err != nil, "wrong %v", err)
+	assert(t, err.Error() == "cannot decodeInt32 from a 0 byte buffer", "wrong %v", err)
+}
+
+func TestMarshalInt32Negative(t *testing.T) {
+	v := -1
+	buf := encodeInt32(v)
+	assert(t, len(buf) == 4, "wrong %v", len(buf))
+	assert(t, buf[0] == 0xFF, "wrong 0x%X", buf[0])
+	assert(t, buf[1] == 0xFF, "wrong 0x%X", buf[1])
+	assert(t, buf[2] == 0xFF, "wrong 0x%X", buf[2])
+	assert(t, buf[3] == 0xFF, "wrong 0x%X", buf[3])
+	var err error
+	v, buf, err = decodeInt32(buf)
+	assert(t, v == -1, "wrong %d", v)
+	assert(t, len(buf) == 0, "wrong %d", len(buf))
+	assert(t, err == nil, "wrong %v", err)
+	v, buf, err = decodeInt32(buf)
+	assert(t, v == int(0), "wrong %d", v)
+	assert(t, len(buf) == 0, "wrong %d", len(buf))
+	assert(t, err != nil, "wrong %v", err)
+	assert(t, err.Error() == "cannot decodeInt32 from a 0 byte buffer", "wrong %v", err)
+	// decode many
+	buf = []byte{
+		0xFF, 0xFF, 0xFF, 0xFF, // -1
+		0xFF, 0xFF, 0xFF, 0xFE, // -2
+		0xFF, 0xFF, 0xFF, 0x00, // -256
+		0x88, 0xCA, 0x6C, 0x00, // -2.000.000.000
+	}
+	assert(t, len(buf) == 16, "wrong %d", len(buf))
+	v, buf, err = decodeInt32(buf)
+	assert(t, v == -1, "wrong %d", v)
+	assert(t, len(buf) == 12, "wrong %d", len(buf))
+	assert(t, err == nil, "wrong %v", err)
+	v, buf, err = decodeInt32(buf)
+	assert(t, v == -2, "wrong %d", v)
+	assert(t, len(buf) == 8, "wrong %d", len(buf))
+	assert(t, err == nil, "wrong %v", err)
+	v, buf, err = decodeInt32(buf)
+	assert(t, v == -256, "wrong %d", v)
+	assert(t, len(buf) == 4, "wrong %d", len(buf))
+	assert(t, err == nil, "wrong %v", err)
+	v, buf, err = decodeInt32(buf)
+	assert(t, v == -2000000000, "wrong %d", v)
+	assert(t, len(buf) == 0, "wrong %d", len(buf))
+	assert(t, err == nil, "wrong %v", err)
 }
 
 func TestMarshalInt64(t *testing.T) {
@@ -68,12 +114,60 @@ func TestMarshalInt64(t *testing.T) {
 	var err error
 	v, buf, err = decodeInt64(buf)
 	assert(t, v == int64(0x7FFFFFFFFFFFFF88), "wrong %d", v)
+	assert(t, v == 9223372036854775688, "wrong %d", v)
 	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err == nil, "wrong %v", err)
 	v, buf, err = decodeInt64(buf)
 	assert(t, v == int64(0), "wrong %d", v)
 	assert(t, len(buf) == 0, "wrong %d", len(buf))
 	assert(t, err != nil, "wrong %v", err)
+	assert(t, err.Error() == "cannot decodeInt64 from a 0 byte buffer", "wrong %v", err)
+}
+
+func TestMarshalInt64Negative(t *testing.T) {
+	// -1
+	var v int64 = -1
+	buf := encodeInt64(v)
+	assert(t, len(buf) == 8, "wrong %d", len(buf))
+	assert(t, buf[0] == 0xFF, "wrong 0x%X", buf[0])
+	assert(t, buf[1] == 0xFF, "wrong 0x%X", buf[1])
+	assert(t, buf[2] == 0xFF, "wrong 0x%X", buf[2])
+	assert(t, buf[3] == 0xFF, "wrong 0x%X", buf[3])
+	assert(t, buf[4] == 0xFF, "wrong 0x%X", buf[4])
+	assert(t, buf[5] == 0xFF, "wrong 0x%X", buf[5])
+	assert(t, buf[6] == 0xFF, "wrong 0x%X", buf[6])
+	assert(t, buf[7] == 0xFF, "wrong 0x%X", buf[7])
+	var err error
+	v, buf, err = decodeInt64(buf)
+	assert(t, v == -1, "wrong %d", v)
+	assert(t, len(buf) == 0, "wrong %d", len(buf))
+	assert(t, err == nil, "wrong %v", err)
+	v, buf, err = decodeInt64(buf)
+	assert(t, v == int64(0), "wrong %d", v)
+	assert(t, len(buf) == 0, "wrong %d", len(buf))
+	assert(t, err != nil, "wrong %v", err)
+	assert(t, err.Error() == "cannot decodeInt64 from a 0 byte buffer", "wrong %v", err)
+	// -3000000000000000000
+	buf = encodeInt64(-3000000000000000000)
+	assert(t, len(buf) == 8, "wrong %d", len(buf))
+	assert(t, buf[0] == 0xD6, "wrong 0x%X", buf[0])
+	assert(t, buf[1] == 0x5D, "wrong 0x%X", buf[1])
+	assert(t, buf[2] == 0xDB, "wrong 0x%X", buf[2])
+	assert(t, buf[3] == 0xE5, "wrong 0x%X", buf[3])
+	assert(t, buf[4] == 0x09, "wrong 0x%X", buf[4])
+	assert(t, buf[5] == 0xD4, "wrong 0x%X", buf[5])
+	assert(t, buf[6] == 0x00, "wrong 0x%X", buf[6])
+	assert(t, buf[7] == 0x00, "wrong 0x%X", buf[7])
+	v, buf, err = decodeInt64(buf)
+	assert(t, v == -3000000000000000000, "wrong %d", v)
+	assert(t, len(buf) == 0, "wrong %d", len(buf))
+	assert(t, err == nil, "wrong %v", err)
+	v, buf, err = decodeInt64(buf)
+	assert(t, v == int64(0), "wrong %d", v)
+	assert(t, len(buf) == 0, "wrong %d", len(buf))
+	assert(t, err != nil, "wrong %v", err)
+	assert(t, err.Error() == "cannot decodeInt64 from a 0 byte buffer", "wrong %v", err)
+
 }
 
 func TestMarshalDouble(t *testing.T) {
