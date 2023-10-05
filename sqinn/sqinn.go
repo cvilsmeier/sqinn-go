@@ -461,14 +461,14 @@ func (sq *Sqinn) Close() error {
 // and do not query rows. A good use case is for beginning and committing
 // a transaction:
 //
-//     _, err = sq.ExecOne("BEGIN");
-//     // do stuff in tx
-//     _, err = sq.ExecOne("COMMIT");
+//	_, err = sq.ExecOne("BEGIN");
+//	// do stuff in tx
+//	_, err = sq.ExecOne("COMMIT");
 //
 // Another use case is for DDL statements:
 //
-//     _, err = sq.ExecOne("DROP TABLE users");
-//     _, err = sq.ExecOne("CREATE TABLE foo (name VARCHAR)");
+//	_, err = sq.ExecOne("DROP TABLE users");
+//	_, err = sq.ExecOne("CREATE TABLE foo (name VARCHAR)");
 //
 // ExecOne(sql) has the same effect as Exec(sql, 1, 0, nil).
 //
