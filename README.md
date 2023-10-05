@@ -218,12 +218,12 @@ Changelog
 
 ### v1.2.0 (2023-10-05)
 
-- add marshalling benchmark
-- remove 'pure Go' claim
-- remove travis build
-- add github workflow with sqinn v1.1.27
-- update min. go version 1.19
-- update samples
+- Added marshalling benchmark
+- Removed 'pure Go' claim
+- Removed travis build
+- Added github workflow with sqinn v1.1.27
+- Updated min. go version 1.19
+- Updated samples
 
 
 ### v1.1.2 (2021-05-27)
