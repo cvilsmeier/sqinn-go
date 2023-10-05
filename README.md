@@ -7,7 +7,7 @@
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](http://unlicense.org/)
 [![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 
-Sqinn-Go is a Go (Golang) library for accessing SQLite databases in pure Go.
+Sqinn-Go is a Go (Golang) library for accessing SQLite databases without cgo.
 It uses Sqinn <https://github.com/cvilsmeier/sqinn> under the hood.
 It starts Sqinn as a child process (`os/exec`) and communicates with
 Sqinn over stdin/stdout/stderr. The Sqinn child process then does the SQLite
@@ -157,9 +157,9 @@ Test coverage is ~85% (as of 2021-03-27)
 Discussion
 ------------------------------------------------------------------------------
 
-### Pure Go, almost
+### Go without cgo
 
-Sqinn-Go is pure Go, as it does not use cgo, nor does it depend on third-party
+Sqinn-Go is Go without cgo, as it does not use cgo, nor does it depend on third-party
 cgo packages. However, Sqinn-Go has a runtime dependency on Sqinn, which is a
 program written in C. Sqinn has to be installed separately on each machine
 where a Sqinn-Go application is executing. For this to work, Sqinn has to be
@@ -215,6 +215,13 @@ returns, no active statements are hanging around.
 
 Changelog
 ------------------------------------------------------------------------------
+
+### v1.1.3 (2023-10-05)
+
+- Added marshalling benchmark
+- Removed 'pure Go' claim from docs
+- Update travis build to new sqinn and new Go versions
+
 
 ### v1.1.2 (2021-05-27)
 

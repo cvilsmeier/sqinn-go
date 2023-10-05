@@ -289,53 +289,55 @@ func assert(t testing.TB, cond bool, format string, args ...interface{}) {
 	}
 }
 
-func BenchmarkMarshalFlot64(b *testing.B) {
+// BenchmarkMarshalFloat64 should answer the question:
+// Is it better to marshal into a pre-allocated byte slice or into a bytes.Buffer?
+func BenchmarkMarshalFloat64(b *testing.B) {
 	values := make([]float64, 1000)
 	for i := 0; i < len(values); i++ {
 		values[i] = 13.1 * float64(i)
 	}
-	b.Run("WithByteSlice", func(b *testing.B) {
-		marshalFunc := func(value float64) []byte {
-			bits := math.Float64bits(value)
-			return []byte{
-				byte(bits >> 56),
-				byte(bits >> 48),
-				byte(bits >> 40),
-				byte(bits >> 32),
-				byte(bits >> 24),
-				byte(bits >> 16),
-				byte(bits >> 8),
-				byte(bits >> 0),
-			}
+	marshalFunc := func(value float64) []byte {
+		bits := math.Float64bits(value)
+		return []byte{
+			byte(bits >> 56),
+			byte(bits >> 48),
+			byte(bits >> 40),
+			byte(bits >> 32),
+			byte(bits >> 24),
+			byte(bits >> 16),
+			byte(bits >> 8),
+			byte(bits >> 0),
 		}
+	}
+	b.Run("WithPreallocatedByteSlice", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			all := make([]byte, 0, 10000)
 			for _, value := range values {
 				data := marshalFunc(value)
 				all = append(all, data...)
 			}
+			assert(b, len(all) == 8000, "len(all) must be 8000 but was %d", len(all))
+		}
+	})
+	b.Run("WithUnallocatedByteSlice", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			var all []byte
+			for _, value := range values {
+				data := marshalFunc(value)
+				all = append(all, data...)
+			}
+			assert(b, len(all) == 8000, "len(all) must be 8000 but was %d", len(all))
 		}
 	})
 	b.Run("WithBuf", func(b *testing.B) {
-		marshalFunc := func(value float64) []byte {
-			bits := math.Float64bits(value)
-			return []byte{
-				byte(bits >> 56),
-				byte(bits >> 48),
-				byte(bits >> 40),
-				byte(bits >> 32),
-				byte(bits >> 24),
-				byte(bits >> 16),
-				byte(bits >> 8),
-				byte(bits >> 0),
-			}
-		}
 		for i := 0; i < b.N; i++ {
 			var buf bytes.Buffer
 			for _, value := range values {
 				data := marshalFunc(value)
 				buf.Write(data)
 			}
+			all := buf.Bytes()
+			assert(b, len(all) == 8000, "len(all) must be 8000 but was %d", len(all))
 		}
 	})
 }

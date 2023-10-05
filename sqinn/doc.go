@@ -1,11 +1,10 @@
 /*
-Package sqinn provides interface to SQLite databases in pure Go.
+Package sqinn provides interface to SQLite databases in Go without cgo.
 
 It uses Sqinn (http://github.com/cvilsmeier/sqinn) for accessing SQLite
 databases. It is not a database/sql driver.
 
-
-Basic Usage
+# Basic Usage
 
 The following sample code opens a database, inserts some data, queries it,
 and closes the database. Error handling is left out for brevity.
@@ -40,8 +39,7 @@ and closes the database. Error handling is left out for brevity.
 		// id=2, name=Bob
 	}
 
-
-Parameter Binding
+# Parameter Binding
 
 For Exec:
 
@@ -62,8 +60,7 @@ For Query:
 		[]byte{sqinn.ValInt, sqinn.ValText}, // two columns: int id and string name
 	)
 
-
-Options
+# Options
 
 Sqinn searches the sqinn binary in the $PATH environment. You can customize
 that behavior by specifying the path to sqinn explicitly when launching sqinn.
@@ -87,13 +84,11 @@ consume it by setting a sqinn.Logger.
 
 See the sqinn.Logger docs for more details.
 
-
-Low-level Functions
+# Low-level Functions
 
 Sqinn implements many of SQLite's C API low-level functions prepare(),
 finalize(), step(), etc. Although made available, we recommend not using them.
 Instead, use Exec and Query. Most (if not all) database tasks can be
 accomplished with Exec and Query.
-
 */
 package sqinn
