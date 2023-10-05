@@ -3,7 +3,7 @@
 
 [![GoDoc Reference](https://godoc.org/github.com/cvilsmeier/sqinn-go/sqinn?status.svg)](http://godoc.org/github.com/cvilsmeier/sqinn-go/sqinn)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cvilsmeier/sqinn-go)](https://goreportcard.com/report/github.com/cvilsmeier/sqinn-go)
-[![Build Status](https://api.travis-ci.com/cvilsmeier/sqinn-go.svg?branch=master)](https://travis-ci.org/cvilsmeier/sqinn-go)
+[![Build Status](https://github.com/cvilsmeier/sqinn-go/actions/workflows/go-linux.yml/badge.svg)](https://github.com/cvilsmeier/sqinn-go/actions/workflows/go-linux.yml)
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](http://unlicense.org/)
 [![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 
