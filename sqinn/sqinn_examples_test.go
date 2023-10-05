@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/cvilsmeier/sqinn-go/sqinn"
 )
@@ -21,24 +22,24 @@ func Example_basic() {
 	}
 
 	// Launch sqinn. Terminate at program exit.
-	sq, _ := sqinn.Launch(sqinn.Options{
+	sq := sqinn.MustLaunch(sqinn.Options{
 		SqinnPath: sqinnPath,
 	})
 	defer sq.Terminate()
 
 	// Open database. Close when we're done.
-	sq.Open(":memory:")
+	sq.MustOpen(":memory:")
 	defer sq.Close()
 
 	// Create a table.
-	sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
+	sq.MustExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
 
 	// Insert users.
-	sq.ExecOne("INSERT INTO users (id, name) VALUES (1, 'Alice')")
-	sq.ExecOne("INSERT INTO users (id, name) VALUES (2, 'Bob')")
+	sq.MustExecOne("INSERT INTO users (id, name) VALUES (1, 'Alice')")
+	sq.MustExecOne("INSERT INTO users (id, name) VALUES (2, 'Bob')")
 
 	// Query users.
-	rows, _ := sq.Query("SELECT id, name FROM users ORDER BY id", nil, []byte{sqinn.ValInt, sqinn.ValText})
+	rows := sq.MustQuery("SELECT id, name FROM users ORDER BY id", nil, []byte{sqinn.ValInt, sqinn.ValText})
 	for _, row := range rows {
 		fmt.Printf("%d %q\n", row.Values[0].AsInt(), row.Values[1].AsString())
 	}
@@ -56,36 +57,36 @@ func Example_parameterBinding() {
 	}
 
 	// Launch sqinn.
-	sq, _ := sqinn.Launch(sqinn.Options{
+	sq := sqinn.MustLaunch(sqinn.Options{
 		SqinnPath: sqinnPath,
 	})
 	defer sq.Terminate()
 
 	// Open database.
-	sq.Open(":memory:")
+	sq.MustOpen(":memory:")
 	defer sq.Close()
 
 	// Create table
-	sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
+	sq.MustExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
 
 	// Insert 3 rows at once
-	sq.ExecOne("BEGIN")
-	sq.Exec(
+	sq.MustExecOne("BEGIN")
+	sq.MustExec(
 		"INSERT INTO users (id, name) VALUES (?,?)",
 		3, // insert 3 rows
 		2, // each row has 2 columns
-		[]interface{}{
+		[]any{
 			1, "Alice", // bind first row
 			2, "Bob", // bind second row
 			3, nil, // third row has no name
 		},
 	)
-	sq.ExecOne("COMMIT")
+	sq.MustExecOne("COMMIT")
 
 	// Query rows
-	rows, _ := sq.Query(
+	rows := sq.MustQuery(
 		"SELECT id, name FROM users WHERE id < ? ORDER BY id ASC",
-		[]interface{}{42},                   // WHERE id < 42
+		[]any{42},                           // WHERE id < 42
 		[]byte{sqinn.ValInt, sqinn.ValText}, // two columns: int id, string name
 	)
 	for _, row := range rows {
@@ -117,7 +118,7 @@ func Example_handlingNullValues() {
 		"INSERT INTO names (val) VALUES (?)",
 		2, // insert 2 rows
 		1, // each row has 1 column
-		[]interface{}{
+		[]any{
 			"wombat", // first row is 'wombat'
 			nil,      // second row is NULL
 		},
@@ -167,9 +168,9 @@ func Example_sqliteSpecialties() {
 	sq.MustExecOne("PRAGMA synchronous = NORMAL")
 
 	// Make a backup into a temp file
-	filename := os.TempDir() + "/db_backup.sqlite"
+	filename := filepath.Join(os.TempDir(), "db_backup.sqlite")
 	os.Remove(filename) // remove in case it exists, sqlite does not want to overwrite
-	sq.MustExec("VACUUM INTO ?", 1, 1, []interface{}{
+	sq.MustExec("VACUUM INTO ?", 1, 1, []any{
 		filename,
 	})
 

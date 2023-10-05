@@ -1,7 +1,7 @@
 package sqinn_test
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"testing"
 
@@ -13,7 +13,7 @@ func TestStdLogger(t *testing.T) {
 	l.Log("foo")
 	// Output:
 	// foo2
-	l.Logger = log.New(ioutil.Discard, "", log.LstdFlags)
+	l.Logger = log.New(io.Discard, "", log.LstdFlags)
 	l.Log("foo")
 	// Output:
 }

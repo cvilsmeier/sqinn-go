@@ -1,0 +1,32 @@
+name: Go-Linux
+
+on: [push]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        go-version: ['1.19', '1.20', '1.21']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go ${{matrix.go-version}}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{matrix.go-version}}
+      
+      - name: Display Go version
+        run: go version
+      
+      - name: Download Sqinn
+        run: |
+          curl -L https://github.com/cvilsmeier/sqinn/releases/download/v1.1.27/dist-linux.zip --output /tmp/dist.zip
+          unzip /tmp/dist.zip -d /tmp/
+          chmod 755 /tmp/sqinn
+      
+      - name: Go Test
+        run: SQINN_PATH=/tmp/sqinn go test ./...

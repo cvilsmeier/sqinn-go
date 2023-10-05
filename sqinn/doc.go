@@ -45,7 +45,7 @@ For Exec:
 
 	nUsers := 3
 	nParamsPerUser := 2
-	sq.Exec("INSERT INTO users (id, name) VALUES (?, ?)", nUsers, nParamsPerUser, []interface{}{
+	sq.Exec("INSERT INTO users (id, name) VALUES (?, ?)", nUsers, nParamsPerUser, []any{
 		1, "Alice",
 		2, "Bob",
 		3, nil,
@@ -56,7 +56,7 @@ For Query:
 	// Query users where id < 42.
 	rows, err := sq.Query(
 		"SELECT id, name FROM users WHERE id < ? ORDER BY name",
-		[]interface{}{42},                   // WHERE id < 42
+		[]any{42},                   // WHERE id < 42
 		[]byte{sqinn.ValInt, sqinn.ValText}, // two columns: int id and string name
 	)
 

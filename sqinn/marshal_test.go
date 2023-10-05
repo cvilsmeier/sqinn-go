@@ -282,15 +282,15 @@ func TestMarshalBlob(t *testing.T) {
 	assert(t, err != nil, "wrong %v", err)
 }
 
-func assert(t testing.TB, cond bool, format string, args ...interface{}) {
+func assert(t testing.TB, cond bool, format string, args ...any) {
 	t.Helper()
 	if !cond {
 		t.Fatalf(format, args...)
 	}
 }
 
-// BenchmarkMarshalFloat64 should answer the question:
-// Is it better to marshal into a pre-allocated byte slice or into a bytes.Buffer?
+// BenchmarkMarshalFloat64 should answer the question: Is it better to marshal into
+// a preallocated byte slice, an unallocated byte slice, or into a bytes.Buffer?
 func BenchmarkMarshalFloat64(b *testing.B) {
 	values := make([]float64, 1000)
 	for i := 0; i < len(values); i++ {

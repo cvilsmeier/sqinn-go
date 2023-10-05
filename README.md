@@ -30,22 +30,22 @@ import "github.com/cvilsmeier/sqinn-go/sqinn"
 func main() {
 
 	// Launch sqinn. Terminate at program exit.
-	sq, _ := sqinn.Launch(sqinn.Options{})
+	sq := sqinn.MustLaunch(sqinn.Options{})
 	defer sq.Terminate()
 
 	// Open database. Close when we're done.
-	sq.Open("./users.db")
+	sq.MustOpen("./users.db")
 	defer sq.Close()
 
 	// Create a table.
-	sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
+	sq.MustExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
 
 	// Insert users.
-	sq.ExecOne("INSERT INTO users (id, name) VALUES (1, 'Alice')")
-	sq.ExecOne("INSERT INTO users (id, name) VALUES (2, 'Bob')")
+	sq.MustExecOne("INSERT INTO users (id, name) VALUES (1, 'Alice')")
+	sq.MustExecOne("INSERT INTO users (id, name) VALUES (2, 'Bob')")
 
 	// Query users.
-	rows, _ := sq.Query("SELECT id, name FROM users ORDER BY id", nil, []byte{sqinn.ValInt, sqinn.ValText})
+	rows := sq.MustQuery("SELECT id, name FROM users ORDER BY id", nil, []byte{sqinn.ValInt, sqinn.ValText})
 	for _, row := range rows {
 		fmt.Printf("id=%d, name=%s\n", row.Values[0].AsInt(), row.Values[1].AsString())
 	}
@@ -57,7 +57,7 @@ func main() {
 ```
 
 Before running that program, Sqinn must be installed on your system. The
-most convenient way is to download a pre-built executable from
+most convenient way is to download a pre-built binary from
 <https://github.com/cvilsmeier/sqinn/releases> and put it somewhere on
 your `$PATH`, or `%PATH%` on Windows.
 
@@ -66,17 +66,17 @@ specify it when opening a Sqinn connection:
 
 ```go
     // take from environment...
-    sq, _ := sqinn.New(sqinn.Options{
+    sq := sqinn.MustLaunch(sqinn.Options{
         SqinnPath: os.Getenv("SQINN_PATH"),
     })
 
     // ...or set path directly
-    sq, _ := sqinn.New(sqinn.Options{
+    sq := sqinn.MustLaunch(sqinn.Options{
         SqinnPath: "/path/to/sqinn",
     })
 ```
 
-If do not want to use a pre-built Sqinn binary, you can compile Sqinn
+If you do not want to use a pre-built Sqinn binary, you can compile Sqinn
 yourself. See <https://github.com/cvilsmeier/sqinn> for instructions.
 
 For more usage examples, see file `sqinn/sqinn_examples_test.go`.
@@ -136,9 +136,9 @@ execute all tests on linux_amd64:
 
 Download and Install Sqinn
 
-	$ cd $HOME
-	$ curl -sL https://github.com/cvilsmeier/sqinn/releases/download/v1.1.6/sqinn-dist-1.1.6.tar.gz | tar xz
-	$ export SQINN_PATH=$HOME/sqinn-dist-1.1.6/linux_amd64/sqinn
+	$ cd /tmp
+	$ curl -sL https://github.com/cvilsmeier/sqinn/releases/download/v1.1.27/dist-linux.zip >> dist-linux.zip && unzip dist-linux.zip
+	$ export SQINN_PATH=/tmp/sqinn
 
 Get and test Sqinn-Go
 
@@ -216,11 +216,14 @@ returns, no active statements are hanging around.
 Changelog
 ------------------------------------------------------------------------------
 
-### v1.1.3 (2023-10-05)
+### v1.2.0 (2023-10-05)
 
-- Added marshalling benchmark
-- Removed 'pure Go' claim from docs
-- Update travis build to new sqinn and new Go versions
+- add marshalling benchmark
+- remove 'pure Go' claim
+- remove travis build
+- add github workflow with sqinn v1.1.27
+- update min. go version 1.19
+- update samples
 
 
 ### v1.1.2 (2021-05-27)

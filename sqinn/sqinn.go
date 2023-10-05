@@ -231,7 +231,7 @@ func (sq *Sqinn) Prepare(sql string) error {
 	return nil
 }
 
-func (sq *Sqinn) bindValue(req []byte, value interface{}) ([]byte, error) {
+func (sq *Sqinn) bindValue(req []byte, value any) ([]byte, error) {
 	switch v := value.(type) {
 	case nil:
 		req = append(req, ValNull)
@@ -256,7 +256,7 @@ func (sq *Sqinn) bindValue(req []byte, value interface{}) ([]byte, error) {
 	return req, nil
 }
 
-func (sq *Sqinn) bindValues(req []byte, values []interface{}) ([]byte, error) {
+func (sq *Sqinn) bindValues(req []byte, values []any) ([]byte, error) {
 	var err error
 	for _, value := range values {
 		req, err = sq.bindValue(req, value)
@@ -274,7 +274,7 @@ func (sq *Sqinn) bindValues(req []byte, values []interface{}) ([]byte, error) {
 // This is a low-level function. Use Exec/Query instead.
 //
 // For further details, see https://www.sqlite.org/c3ref/bind_blob.html.
-func (sq *Sqinn) Bind(iparam int, value interface{}) error {
+func (sq *Sqinn) Bind(iparam int, value any) error {
 	if iparam < 1 {
 		return fmt.Errorf("Bind: iparam must be >= 1 but was %d", iparam)
 	}
@@ -515,7 +515,7 @@ func (sq *Sqinn) MustExecOne(sql string) int {
 // resulting int slice will always be of length niterations.
 //
 // If an error occurs, it will return (nil, err).
-func (sq *Sqinn) Exec(sql string, niterations, nparams int, values []interface{}) ([]int, error) {
+func (sq *Sqinn) Exec(sql string, niterations, nparams int, values []any) ([]int, error) {
 	if niterations < 0 {
 		return nil, fmt.Errorf("Exec '%s' niterations must be >= 0 but was %d", sql, niterations)
 	}
@@ -549,7 +549,7 @@ func (sq *Sqinn) Exec(sql string, niterations, nparams int, values []interface{}
 }
 
 // MustExec is like Exec except it panics on error.
-func (sq *Sqinn) MustExec(sql string, niterations, nparams int, values []interface{}) []int {
+func (sq *Sqinn) MustExec(sql string, niterations, nparams int, values []any) []int {
 	mods, err := sq.Exec(sql, niterations, nparams, values)
 	if err != nil {
 		panic(err)
@@ -576,7 +576,7 @@ func (sq *Sqinn) MustExec(sql string, niterations, nparams int, values []interfa
 // equal to the length of colTypes.
 //
 // If an error occurs, it will return (nil, err).
-func (sq *Sqinn) Query(sql string, params []interface{}, colTypes []byte) ([]Row, error) {
+func (sq *Sqinn) Query(sql string, params []any, colTypes []byte) ([]Row, error) {
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
 	req := make([]byte, 0, len(sql)+8*len(params))
@@ -619,7 +619,7 @@ func (sq *Sqinn) Query(sql string, params []interface{}, colTypes []byte) ([]Row
 }
 
 // MustQuery is like Query except it panics on error.
-func (sq *Sqinn) MustQuery(sql string, values []interface{}, colTypes []byte) []Row {
+func (sq *Sqinn) MustQuery(sql string, values []any, colTypes []byte) []Row {
 	rows, err := sq.Query(sql, values, colTypes)
 	if err != nil {
 		panic(err)

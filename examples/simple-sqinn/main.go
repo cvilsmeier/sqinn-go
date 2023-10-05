@@ -11,46 +11,46 @@ import (
 	"github.com/cvilsmeier/sqinn-go/sqinn"
 )
 
-// Simple sqinn-go usage. Error handling left out for brevity.
+// Simple sqinn-go usage.
 func main() {
 	sqinnpath := os.Getenv("SQINN_PATH")
-	dbname := "./users.db"
+	dbname := ":memory:" // or a real file, e.g. "/tmp/users.db"
 	flag.StringVar(&sqinnpath, "sqinn", sqinnpath, "path to sqinn")
 	flag.StringVar(&dbname, "db", dbname, "path to db file")
 	flag.Parse()
 
 	// Launch sqinn, terminate when program exists.
-	sq, _ := sqinn.Launch(sqinn.Options{
+	sq := sqinn.MustLaunch(sqinn.Options{
 		SqinnPath: sqinnpath,
 	})
 	defer sq.Terminate()
 
 	// Open a database. Database file will be created if it
 	// does not exist. Close when done.
-	sq.Open(dbname)
+	sq.MustOpen(dbname)
 	defer sq.Close()
 
 	// Create a table. Cleanup when done.
-	sq.ExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
+	sq.MustExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
 	defer sq.ExecOne("DROP TABLE users")
 
 	// Insert user without parameters.
-	sq.ExecOne("INSERT INTO users (id, name) VALUES (1, 'Alice')")
+	sq.MustExecOne("INSERT INTO users (id, name) VALUES (1, 'Alice')")
 
 	// Insert three users in a transaction.
-	sq.ExecOne("BEGIN")
+	sq.MustExecOne("BEGIN")
 	nusers := 3         // we want three users
 	nparamsPerUser := 2 // each user has 2 columns: id and name
-	paramValues := []interface{}{
+	paramValues := []any{
 		2, "Bob", // values for first user
 		3, "Carol", // values for second user
 		4, "Dave", // values for third user
 	}
-	sq.Exec("INSERT INTO users (id, name) VALUES (?, ?)", nusers, nparamsPerUser, paramValues)
-	sq.ExecOne("COMMIT")
+	sq.MustExec("INSERT INTO users (id, name) VALUES (?, ?)", nusers, nparamsPerUser, paramValues)
+	sq.MustExecOne("COMMIT")
 
 	// Query all users. Two columns: id (int) and name (string)
-	rows, _ := sq.Query(
+	rows := sq.MustQuery(
 		"SELECT id, name FROM users ORDER BY id",
 		nil,                                 // no query parameters
 		[]byte{sqinn.ValInt, sqinn.ValText}, // fetch id as int, name as string
@@ -66,9 +66,9 @@ func main() {
 
 	// Query name for id 2
 	id := 2
-	rows, _ = sq.Query(
+	rows = sq.MustQuery(
 		"SELECT name FROM users WHERE id = ?",
-		[]interface{}{id},     // WHERE id = 2
+		[]any{id},             // WHERE id = 2
 		[]byte{sqinn.ValText}, // fetch name as string
 	)
 	for _, row := range rows {
@@ -78,7 +78,7 @@ func main() {
 	// id 2 is "Bob"
 
 	// Delete users.
-	modCount, _ := sq.ExecOne("DELETE FROM users")
+	modCount := sq.MustExecOne("DELETE FROM users")
 	fmt.Printf("deleted %d rows\n", modCount)
 	// Output:
 	// deleted 4 rows

@@ -103,7 +103,7 @@ func TestExecAndQueryWithErrors(t *testing.T) {
 	_, err = sq.ExecOne("INSERT INTO users (id, name, age) VALUES (1, 'Alice', 27)")
 	assert(t, err != nil, "want err but was ok")
 	// insert user with wrong param (NOT NULL!!), must fail
-	_, err = sq.Exec("INSERT INTO users (name) VALUES (?)", 1, 1, []interface{}{nil})
+	_, err = sq.Exec("INSERT INTO users (name) VALUES (?)", 1, 1, []any{nil})
 	assert(t, err != nil, "want err but was ok")
 	// insert user with good sql, must succeed
 	_, err = sq.ExecOne("INSERT INTO users (name) VALUES ('Alice')")
@@ -138,7 +138,7 @@ func TestColTypes(t *testing.T) {
 		"INSERT INTO foo (i, i64, f64, s, b) VALUES(?, ?, ?, ?, ?)", // sql
 		1, // 1 row
 		5, // row has 5 columns
-		[]interface{}{
+		[]any{
 			13,              // int i
 			int64(1) << 62,  // int64 i64
 			float64(1.002),  // float64 f64
@@ -226,7 +226,7 @@ func TestNullValues(t *testing.T) {
 		"INSERT INTO tabl (i, i64, f64, s, b) VALUES(?, ?, ?, ?, ?)", // sql
 		1, // insert 1 row
 		5, // row has 5 columns
-		[]interface{}{
+		[]any{
 			nil, // int i
 			nil, // int64 i64
 			nil, // float64 f64
@@ -449,7 +449,7 @@ func TestMisuse(t *testing.T) {
 	assert(t, strings.Contains(err.Error(), substr), "want %q but was %s", substr, err)
 }
 
-func assert(t testing.TB, cond bool, format string, args ...interface{}) {
+func assert(t testing.TB, cond bool, format string, args ...any) {
 	t.Helper()
 	if !cond {
 		t.Fatalf(format, args...)
@@ -457,7 +457,7 @@ func assert(t testing.TB, cond bool, format string, args ...interface{}) {
 }
 
 func BenchmarkValueBinding(b *testing.B) {
-	bindFunc := func(value interface{}) byte {
+	bindFunc := func(value any) byte {
 		switch value.(type) {
 		case nil:
 			return sqinn.ValNull
@@ -479,7 +479,7 @@ func BenchmarkValueBinding(b *testing.B) {
 	float64Value := float64(1)
 	stringValue := "1"
 	blobValue := []byte{1}
-	values := []interface{}{nil, intValue, int64Value, float64Value, stringValue, blobValue}
+	values := []any{nil, intValue, int64Value, float64Value, stringValue, blobValue}
 	for i := 0; i < b.N; i++ {
 		for _, value := range values {
 			valType := bindFunc(value)
@@ -489,7 +489,7 @@ func BenchmarkValueBinding(b *testing.B) {
 }
 
 func BenchmarkValueBindingWithPointers(b *testing.B) {
-	bindFunc := func(value interface{}) byte {
+	bindFunc := func(value any) byte {
 		switch value.(type) {
 		case nil:
 			return sqinn.ValNull
@@ -519,7 +519,7 @@ func BenchmarkValueBindingWithPointers(b *testing.B) {
 	float64Value := float64(1)
 	stringValue := "1"
 	blobValue := []byte{1}
-	values := []interface{}{nil, intValue, &intValue, int64Value, &int64Value, float64Value, &float64Value, stringValue, &stringValue, blobValue}
+	values := []any{nil, intValue, &intValue, int64Value, &int64Value, float64Value, &float64Value, stringValue, &stringValue, blobValue}
 	for i := 0; i < b.N; i++ {
 		for _, value := range values {
 			valType := bindFunc(value)
