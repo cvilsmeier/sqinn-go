@@ -15,6 +15,11 @@ work.
 
 If you want SQLite but do not want cgo, Sqinn-Go can be a solution.
 
+> [!NOTE]
+> This work is sponsored by Monibot - Easy Server and Application Monitoring.
+> Try out Monibot at [https://monibot.io](https://monibot.io?ref=sqinn-go).
+> It's free.
+
 
 Usage
 ------------------------------------------------------------------------------
