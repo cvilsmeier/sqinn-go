@@ -181,7 +181,7 @@ func (sq *Sqinn) SqliteVersion() (string, error) {
 }
 
 // Open opens a database.
-// The filename can be ":memory:" or any filesystem path, e.g. "/tmp/test.db".
+// The filename can be ":memory:" or interface{} filesystem path, e.g. "/tmp/test.db".
 // Sqinn keeps the database open until Close is called. After Close has been
 // called, this Sqinn instance can be terminated with Terminate, or Open can be
 // called again, either on the same database or on a different one. For every
@@ -235,7 +235,7 @@ func (sq *Sqinn) Prepare(sql string) error {
 	return nil
 }
 
-func (sq *Sqinn) bindValue(req []byte, value any) ([]byte, error) {
+func (sq *Sqinn) bindValue(req []byte, value interface{}) ([]byte, error) {
 	switch v := value.(type) {
 	case nil:
 		req = append(req, byte(ValNull))
@@ -260,7 +260,7 @@ func (sq *Sqinn) bindValue(req []byte, value any) ([]byte, error) {
 	return req, nil
 }
 
-func (sq *Sqinn) bindValues(req []byte, values []any) ([]byte, error) {
+func (sq *Sqinn) bindValues(req []byte, values []interface{}) ([]byte, error) {
 	var err error
 	for _, value := range values {
 		req, err = sq.bindValue(req, value)
@@ -278,14 +278,14 @@ func (sq *Sqinn) bindValues(req []byte, values []any) ([]byte, error) {
 // This is a low-level function. Use Exec/Query instead.
 //
 // For further details, see https://www.sqlite.org/c3ref/bind_blob.html.
-func (sq *Sqinn) Bind(iparam int, value any) error {
+func (sq *Sqinn) Bind(iparam int, value interface{}) error {
 	if iparam < 1 {
 		return fmt.Errorf("Bind: iparam must be >= 1 but was %d", iparam)
 	}
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
 	// req
-	req := make([]byte, 0, 6)
+	req := make([]byte, 0)
 	req = append(req, fcBind)
 	req = append(req, encodeInt32(iparam)...)
 	var err error
@@ -585,7 +585,7 @@ func (sq *Sqinn) MustExecOne(sql string) int {
 // resulting int slice will always be of length niterations.
 //
 // If an error occurs, it will return (nil, err).
-func (sq *Sqinn) Exec(sql string, niterations, nparams int, values []any) ([]int, error) {
+func (sq *Sqinn) Exec(sql string, niterations, nparams int, values []interface{}) ([]int, error) {
 	if niterations < 0 {
 		return nil, fmt.Errorf("Exec '%s' niterations must be >= 0 but was %d", sql, niterations)
 	}
@@ -619,7 +619,7 @@ func (sq *Sqinn) Exec(sql string, niterations, nparams int, values []any) ([]int
 }
 
 // MustExec is like Exec except it panics on error.
-func (sq *Sqinn) MustExec(sql string, niterations, nparams int, values []any) []int {
+func (sq *Sqinn) MustExec(sql string, niterations, nparams int, values []interface{}) []int {
 	mods, err := sq.Exec(sql, niterations, nparams, values)
 	if err != nil {
 		panic(err)
@@ -646,7 +646,7 @@ func (sq *Sqinn) MustExec(sql string, niterations, nparams int, values []any) []
 // equal to the length of colTypes.
 //
 // If an error occurs, it will return (nil, err).
-func (sq *Sqinn) Query(sql string, params []any, colTypes []ValueType) ([]Row, error) {
+func (sq *Sqinn) Query(sql string, params []interface{}, colTypes []ValueType) ([]Row, error) {
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
 	req := make([]byte, 0, len(sql)+8*len(params))
@@ -690,7 +690,7 @@ func (sq *Sqinn) Query(sql string, params []any, colTypes []ValueType) ([]Row, e
 }
 
 // MustQuery is like Query except it panics on error.
-func (sq *Sqinn) MustQuery(sql string, values []any, colTypes []ValueType) []Row {
+func (sq *Sqinn) MustQuery(sql string, values []interface{}, colTypes []ValueType) []Row {
 	rows, err := sq.Query(sql, values, colTypes)
 	if err != nil {
 		panic(err)
@@ -760,7 +760,7 @@ func (sq *Sqinn) writeAndRead(req []byte) ([]byte, error) {
 // Terminate terminates a running Sqinn instance.
 // Each launched Sqinn instance should be terminated
 // with Terminate. After Terminate has been called, this Sqinn
-// instance must not be used any more.
+// instance must not be used interface{} more.
 func (sq *Sqinn) Terminate() error {
 	sq.mx.Lock()
 	defer sq.mx.Unlock()

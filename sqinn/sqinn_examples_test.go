@@ -75,7 +75,7 @@ func Example_parameterBinding() {
 		"INSERT INTO users (id, name) VALUES (?,?)",
 		3, // insert 3 rows
 		2, // each row has 2 columns
-		[]any{
+		[]interface{}{
 			1, "Alice", // bind first row
 			2, "Bob", // bind second row
 			3, nil, // third row has no name
@@ -86,7 +86,7 @@ func Example_parameterBinding() {
 	// Query rows
 	rows := sq.MustQuery(
 		"SELECT id, name FROM users WHERE id < ? ORDER BY id ASC",
-		[]any{42},                           // WHERE id < 42
+		[]interface{}{42}, // WHERE id < 42
 		[]sqinn.ValueType{sqinn.ValInt, sqinn.ValText}, // two columns: int id, string name
 	)
 	for _, row := range rows {
@@ -118,7 +118,7 @@ func Example_handlingNullValues() {
 		"INSERT INTO names (val) VALUES (?)",
 		2, // insert 2 rows
 		1, // each row has 1 column
-		[]any{
+		[]interface{}{
 			"wombat", // first row is 'wombat'
 			nil,      // second row is NULL
 		},
@@ -170,7 +170,7 @@ func Example_sqliteSpecialties() {
 	// Make a backup into a temp file
 	filename := filepath.Join(os.TempDir(), "db_backup.sqlite")
 	os.Remove(filename) // remove in case it exists, sqlite does not want to overwrite
-	sq.MustExec("VACUUM INTO ?", 1, 1, []any{
+	sq.MustExec("VACUUM INTO ?", 1, 1, []interface{}{
 		filename,
 	})
 

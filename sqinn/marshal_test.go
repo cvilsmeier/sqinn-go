@@ -282,7 +282,7 @@ func TestMarshalBlob(t *testing.T) {
 	assert(t, err != nil, "wrong %v", err)
 }
 
-func assert(t testing.TB, cond bool, format string, args ...any) {
+func assert(t testing.TB, cond bool, format string, args ...interface{}) {
 	t.Helper()
 	if !cond {
 		t.Fatalf(format, args...)

@@ -41,7 +41,7 @@ func main() {
 	sq.MustExecOne("BEGIN")
 	nusers := 3         // we want three users
 	nparamsPerUser := 2 // each user has 2 columns: id and name
-	paramValues := []any{
+	paramValues := []interface{}{
 		2, "Bob", // values for first user
 		3, "Carol", // values for second user
 		4, "Dave", // values for third user
@@ -68,7 +68,7 @@ func main() {
 	id := 2
 	rows = sq.MustQuery(
 		"SELECT name FROM users WHERE id = ?",
-		[]any{id},             // WHERE id = 2
+		[]interface{}{id},                // WHERE id = 2
 		[]sqinn.ValueType{sqinn.ValText}, // fetch name as string
 	)
 	for _, row := range rows {

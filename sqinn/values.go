@@ -90,7 +90,7 @@ type BlobValue struct {
 // IsNull returns true if the value is NULL, otherwise true.
 func (v BlobValue) IsNull() bool { return !v.Set }
 
-// An AnyValue can hold any value type.
+// An AnyValue can hold interface{} value type.
 type AnyValue struct {
 	Int    IntValue    // a nullable Go int
 	Int64  Int64Value  // a nullable Go int64
@@ -124,7 +124,7 @@ func (a AnyValue) AsBlob() []byte {
 	return a.Blob.Value
 }
 
-func (a AnyValue) AsValue(t ValueType) any {
+func (a AnyValue) AsValue(t ValueType) interface{} {
 	switch t {
 	case ValInt:
 		return a.Int.Value
