@@ -43,7 +43,7 @@ func TestOpenAndClose(t *testing.T) {
 	_, err = sq.ExecOne("CREATE TABLE users (name VARCHAR)")
 	assert(t, err == nil, "want ok but was %s", err)
 	// table must be empty
-	rows := sq.MustQuery("SELECT name FROM users", nil, []byte{sqinn.ValText})
+	rows := sq.MustQuery("SELECT name FROM users", nil, []sqinn.ValueType{sqinn.ValText})
 	assert(t, len(rows) == 0, "want no rows but was %d", len(rows))
 	// close db
 	err = sq.Close()
@@ -52,7 +52,7 @@ func TestOpenAndClose(t *testing.T) {
 	err = sq.Open(":memory:")
 	assert(t, err == nil, "want ok but was %s", err)
 	// query users must fail because table does not exist in db #2
-	_, err = sq.Query("SELECT name FROM users ORDER BY name", nil, []byte{sqinn.ValText})
+	_, err = sq.Query("SELECT name FROM users ORDER BY name", nil, []sqinn.ValueType{sqinn.ValText})
 	assert(t, err != nil, "want err but was ok")
 	substr = "no such table"
 	assert(t, strings.Contains(err.Error(), substr), "want ..%q.. but was %s", substr, err)
@@ -113,7 +113,7 @@ func TestExecAndQueryWithErrors(t *testing.T) {
 	assert(t, err != nil, "want err but was ok")
 	assert(t, len(rows) == 0, "want no rows but was %v", len(rows))
 	// query users with good sql, must succeed
-	rows, err = sq.Query("SELECT name FROM users ORDER BY name", nil, []byte{sqinn.ValText})
+	rows, err = sq.Query("SELECT name FROM users ORDER BY name", nil, []sqinn.ValueType{sqinn.ValText})
 	assert(t, err == nil, "want ok but was %v", err)
 	assert(t, len(rows) == 1, "want 1 row but was %v", len(rows))
 }
@@ -157,7 +157,7 @@ func TestColTypes(t *testing.T) {
 	rows, err := sq.Query(
 		"SELECT i, i64, f64, s, b FROM foo ORDER BY i",
 		nil, // no query parameters
-		[]byte{
+		[]sqinn.ValueType{
 			sqinn.ValInt,
 			sqinn.ValInt64,
 			sqinn.ValDouble,
@@ -199,8 +199,8 @@ func TestColTypes(t *testing.T) {
 	// query all rows again, must have none
 	rows, err = sq.Query(
 		"SELECT i, i64, f64, s, b FROM foo ORDER BY i",
-		nil,                  // no query parameters
-		[]byte{sqinn.ValInt}, // we want only the first column
+		nil,                             // no query parameters
+		[]sqinn.ValueType{sqinn.ValInt}, // we want only the first column
 	)
 	assert(t, err == nil, "want ok but was %s", err)
 	assert(t, len(rows) == 0, "want len(rows) 0 but was %d", len(rows))
@@ -241,7 +241,7 @@ func TestNullValues(t *testing.T) {
 	rows, err := sq.Query(
 		"SELECT i, i64, f64, s, b FROM tabl ORDER BY i",
 		nil, // no query parameters
-		[]byte{
+		[]sqinn.ValueType{
 			sqinn.ValInt,    // query 'i INTEGER' as int
 			sqinn.ValInt64,  // query 'i64 BIGINT' as int64
 			sqinn.ValDouble, // query 'f64 REAL' as float64
@@ -411,7 +411,7 @@ func TestMisuse(t *testing.T) {
 	substr = "must finalize first"
 	assert(t, strings.Contains(err.Error(), substr), "want %q but was %s", substr, err)
 	// query must fail as long as we have active statements
-	_, err = sq.Query("SELECT 1", nil, []byte{sqinn.ValInt})
+	_, err = sq.Query("SELECT 1", nil, []sqinn.ValueType{sqinn.ValInt})
 	assert(t, err != nil, "want err but was ok")
 	substr = "must finalize first"
 	assert(t, strings.Contains(err.Error(), substr), "want %q but was %s", substr, err)
@@ -457,7 +457,7 @@ func assert(t testing.TB, cond bool, format string, args ...any) {
 }
 
 func BenchmarkValueBinding(b *testing.B) {
-	bindFunc := func(value any) byte {
+	bindFunc := func(value any) sqinn.ValueType {
 		switch value.(type) {
 		case nil:
 			return sqinn.ValNull
@@ -489,7 +489,7 @@ func BenchmarkValueBinding(b *testing.B) {
 }
 
 func BenchmarkValueBindingWithPointers(b *testing.B) {
-	bindFunc := func(value any) byte {
+	bindFunc := func(value any) sqinn.ValueType {
 		switch value.(type) {
 		case nil:
 			return sqinn.ValNull

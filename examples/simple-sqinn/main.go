@@ -52,8 +52,8 @@ func main() {
 	// Query all users. Two columns: id (int) and name (string)
 	rows := sq.MustQuery(
 		"SELECT id, name FROM users ORDER BY id",
-		nil,                                 // no query parameters
-		[]byte{sqinn.ValInt, sqinn.ValText}, // fetch id as int, name as string
+		nil, // no query parameters
+		[]sqinn.ValueType{sqinn.ValInt, sqinn.ValText}, // fetch id as int, name as string
 	)
 	for _, row := range rows {
 		fmt.Printf("found id=%d, name=%s\n", row.Values[0].AsInt(), row.Values[1].AsString())
@@ -69,7 +69,7 @@ func main() {
 	rows = sq.MustQuery(
 		"SELECT name FROM users WHERE id = ?",
 		[]any{id},             // WHERE id = 2
-		[]byte{sqinn.ValText}, // fetch name as string
+		[]sqinn.ValueType{sqinn.ValText}, // fetch name as string
 	)
 	for _, row := range rows {
 		fmt.Printf("id %d is %q\n", id, row.Values[0].AsString())

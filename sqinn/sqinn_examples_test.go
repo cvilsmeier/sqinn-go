@@ -39,7 +39,7 @@ func Example_basic() {
 	sq.MustExecOne("INSERT INTO users (id, name) VALUES (2, 'Bob')")
 
 	// Query users.
-	rows := sq.MustQuery("SELECT id, name FROM users ORDER BY id", nil, []byte{sqinn.ValInt, sqinn.ValText})
+	rows := sq.MustQuery("SELECT id, name FROM users ORDER BY id", nil, []sqinn.ValueType{sqinn.ValInt, sqinn.ValText})
 	for _, row := range rows {
 		fmt.Printf("%d %q\n", row.Values[0].AsInt(), row.Values[1].AsString())
 	}
@@ -87,7 +87,7 @@ func Example_parameterBinding() {
 	rows := sq.MustQuery(
 		"SELECT id, name FROM users WHERE id < ? ORDER BY id ASC",
 		[]any{42},                           // WHERE id < 42
-		[]byte{sqinn.ValInt, sqinn.ValText}, // two columns: int id, string name
+		[]sqinn.ValueType{sqinn.ValInt, sqinn.ValText}, // two columns: int id, string name
 	)
 	for _, row := range rows {
 		fmt.Printf("%d %q\n", row.Values[0].AsInt(), row.Values[1].AsString())
@@ -128,8 +128,8 @@ func Example_handlingNullValues() {
 	// Query rows
 	rows := sq.MustQuery(
 		"SELECT val FROM names ORDER BY val",
-		nil,                   // no query parameters
-		[]byte{sqinn.ValText}, // one column of type TEXT
+		nil,                              // no query parameters
+		[]sqinn.ValueType{sqinn.ValText}, // one column of type TEXT
 	)
 	for _, row := range rows {
 		stringValue := row.Values[0].String

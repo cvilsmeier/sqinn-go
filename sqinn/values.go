@@ -2,26 +2,28 @@ package sqinn
 
 // value types, same as in sqinn/src/handler.h
 
+type ValueType byte
+
 // Value types for binding query parameters and retrieving column values.
 const (
 
 	// ValNull represents the NULL value (Go nil)
-	ValNull byte = 0
+	ValNull ValueType = 0
 
 	// ValInt represents a Go int
-	ValInt byte = 1
+	ValInt ValueType = 1
 
 	// ValInt64 represents a Go int64
-	ValInt64 byte = 2
+	ValInt64 ValueType = 2
 
 	// ValDouble represents a Go float64
-	ValDouble byte = 6 // the IEEE variant
+	ValDouble ValueType = 6 // the IEEE variant
 
 	// ValText represents a Go string
-	ValText byte = 4
+	ValText ValueType = 4
 
 	// ValBlob represents a Go []byte
-	ValBlob byte = 5
+	ValBlob ValueType = 5
 )
 
 // An IntValue holds a nullable int value. The zero value is not set (a.k.a. NULL).
@@ -120,6 +122,22 @@ func (a AnyValue) AsString() string {
 // AsBlob returns a []byte value or nil if it is NULL or the value is not a blob.
 func (a AnyValue) AsBlob() []byte {
 	return a.Blob.Value
+}
+
+func (a AnyValue) AsValue(t ValueType) any {
+	switch t {
+	case ValInt:
+		return a.Int.Value
+	case ValInt64:
+		return a.Int64.Value
+	case ValDouble:
+		return a.Double.Value
+	case ValText:
+		return a.String.Value
+	case ValBlob:
+		return a.Blob.Value
+	}
+	return nil
 }
 
 // A Row represents a query result row and holds a slice of values, one value

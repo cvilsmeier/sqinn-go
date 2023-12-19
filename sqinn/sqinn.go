@@ -7,6 +7,7 @@ import (
 	"log"
 	"os/exec"
 	"sync"
+	"unsafe"
 )
 
 // function codes, same as in sqinn/src/handler.h
@@ -24,6 +25,9 @@ const (
 	fcColumn        byte = 16
 	fcFinalize      byte = 17
 	fcClose         byte = 18
+	fcColumnCount   byte = 19
+	fcColumnType    byte = 20
+	fcColumnName    byte = 21
 	fcExec          byte = 51
 	fcQuery         byte = 52
 )
@@ -234,21 +238,21 @@ func (sq *Sqinn) Prepare(sql string) error {
 func (sq *Sqinn) bindValue(req []byte, value any) ([]byte, error) {
 	switch v := value.(type) {
 	case nil:
-		req = append(req, ValNull)
+		req = append(req, byte(ValNull))
 	case int:
-		req = append(req, ValInt)
+		req = append(req, byte(ValInt))
 		req = append(req, encodeInt32(v)...)
 	case int64:
-		req = append(req, ValInt64)
+		req = append(req, byte(ValInt64))
 		req = append(req, encodeInt64(v)...)
 	case float64:
-		req = append(req, ValDouble)
+		req = append(req, byte(ValDouble))
 		req = append(req, encodeDouble(float64(v))...)
 	case string:
-		req = append(req, ValText)
+		req = append(req, byte(ValText))
 		req = append(req, encodeString(v)...)
 	case []byte:
-		req = append(req, ValBlob)
+		req = append(req, byte(ValBlob))
 		req = append(req, encodeBlob(v)...)
 	default:
 		return nil, fmt.Errorf("cannot bind type %T", v)
@@ -361,7 +365,73 @@ func (sq *Sqinn) Changes() (int, error) {
 	return changes, nil
 }
 
-func (sq *Sqinn) decodeAnyValue(resp []byte, colType byte) (AnyValue, []byte, error) {
+// ColumnsCount returns the number of columns in the result set.
+//
+// This is a low-level function. Use Exec/Query instead.
+//
+// For further details, see https://www.sqlite.org/c3ref/column_count.html.
+func (sq *Sqinn) ColumnCount() (int, error) {
+	sq.mx.Lock()
+	defer sq.mx.Unlock()
+	// req
+	req := []byte{fcColumnCount}
+	// resp
+	resp, err := sq.writeAndRead(req)
+	if err != nil {
+		return 0, err
+	}
+	var columnsCount int
+	columnsCount, _, err = decodeInt32(resp)
+	if err != nil {
+		return 0, err
+	}
+	return columnsCount, nil
+}
+
+// ColumnType returns the type of the specified column in the result set.
+//
+// This is a low-level function. Use Exec/Query instead.
+//
+// For further details, see https://www.sqlite.org/c3ref/column_blob.html.
+func (sq *Sqinn) ColumnType(col int) (ValueType, error) {
+	sq.mx.Lock()
+	defer sq.mx.Unlock()
+	// req
+	req := make([]byte, 0, 4)
+	req = append(req, fcColumnType)
+	req = append(req, encodeInt32(col)...)
+	// resp
+	resp, err := sq.writeAndRead(req)
+	if err != nil {
+		return ValNull, err
+	}
+	colType, _, err := decodeByte(resp)
+	if err != nil {
+		return ValNull, err
+	}
+	return ValueType(colType), nil
+}
+
+func (sq *Sqinn) ColumnName(col int) (string, error) {
+	sq.mx.Lock()
+	defer sq.mx.Unlock()
+	// req
+	req := make([]byte, 0, 2)
+	req = append(req, fcColumnName)
+	req = append(req, encodeInt32(col)...)
+	// resp
+	resp, err := sq.writeAndRead(req)
+	if err != nil {
+		return "", err
+	}
+	colName, _, err := decodeString(resp)
+	if err != nil {
+		return "", err
+	}
+	return colName, nil
+}
+
+func (sq *Sqinn) decodeAnyValue(resp []byte, colType ValueType) (AnyValue, []byte, error) {
 	var any AnyValue
 	var set bool
 	var err error
@@ -405,14 +475,14 @@ func (sq *Sqinn) decodeAnyValue(resp []byte, colType byte) (AnyValue, []byte, er
 // This is a low-level function. Use Exec/Query instead.
 //
 // For further details, see https://www.sqlite.org/c3ref/column_blob.html.
-func (sq *Sqinn) Column(icol int, colType byte) (AnyValue, error) {
+func (sq *Sqinn) Column(icol int, colType ValueType) (AnyValue, error) {
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
 	// req
 	req := make([]byte, 0, 6)
 	req = append(req, fcColumn)
 	req = append(req, encodeInt32(icol)...)
-	req = append(req, colType)
+	req = append(req, byte(colType))
 	// resp
 	var any AnyValue
 	resp, err := sq.writeAndRead(req)
@@ -576,7 +646,7 @@ func (sq *Sqinn) MustExec(sql string, niterations, nparams int, values []any) []
 // equal to the length of colTypes.
 //
 // If an error occurs, it will return (nil, err).
-func (sq *Sqinn) Query(sql string, params []any, colTypes []byte) ([]Row, error) {
+func (sq *Sqinn) Query(sql string, params []any, colTypes []ValueType) ([]Row, error) {
 	sq.mx.Lock()
 	defer sq.mx.Unlock()
 	req := make([]byte, 0, len(sql)+8*len(params))
@@ -590,8 +660,9 @@ func (sq *Sqinn) Query(sql string, params []any, colTypes []byte) ([]Row, error)
 		return nil, err
 	}
 	ncols := len(colTypes)
+	byteCols := *(*[]byte)(unsafe.Pointer(&colTypes))
 	req = append(req, encodeInt32(ncols)...)
-	req = append(req, colTypes...)
+	req = append(req, byteCols...)
 	resp, err := sq.writeAndRead(req)
 	if err != nil {
 		return nil, err
@@ -619,7 +690,7 @@ func (sq *Sqinn) Query(sql string, params []any, colTypes []byte) ([]Row, error)
 }
 
 // MustQuery is like Query except it panics on error.
-func (sq *Sqinn) MustQuery(sql string, values []any, colTypes []byte) []Row {
+func (sq *Sqinn) MustQuery(sql string, values []any, colTypes []ValueType) []Row {
 	rows, err := sq.Query(sql, values, colTypes)
 	if err != nil {
 		panic(err)
