@@ -24,7 +24,7 @@ jobs:
       
       - name: Download Sqinn
         run: |
-          curl -L https://github.com/cvilsmeier/sqinn/releases/download/v1.1.27/dist-linux.zip --output /tmp/dist.zip
+          curl -L https://github.com/cvilsmeier/sqinn/releases/download/v1.1.30/dist-linux.zip --output /tmp/dist.zip
           unzip /tmp/dist.zip -d /tmp/
           chmod 755 /tmp/sqinn
       
