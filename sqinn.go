@@ -61,10 +61,10 @@ type Sqinn struct {
 	r        *reader
 }
 
-//go:embed prebuilt/linux/sqinn2
+//go:embed "prebuilt/linux/sqinn2"
 var prebuiltLinux []byte
 
-//go:embed prebuilt/windows/sqinn2.exe
+//go:embed "prebuilt/windows/sqinn2.exe"
 var prebuiltWindows []byte
 
 // Launch launches a new sqinn subprocess. The [Options] specify
