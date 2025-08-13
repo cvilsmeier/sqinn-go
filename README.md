@@ -1,16 +1,16 @@
 
-![Sqinn](logo-200.png "Sqinn")
+![Sqinn](logo.png "Sqinn")
 
 [![GoDoc Reference](https://godoc.org/github.com/cvilsmeier/sqinn-go/sqinn?status.svg)](http://godoc.org/github.com/cvilsmeier/sqinn-go/sqinn)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cvilsmeier/sqinn-go)](https://goreportcard.com/report/github.com/cvilsmeier/sqinn-go)
-[![Build Status](https://github.com/cvilsmeier/sqinn-go/actions/workflows/go-linux.yml/badge.svg)](https://github.com/cvilsmeier/sqinn-go/actions/workflows/go-linux.yml)
+[![Build Status](https://github.com/cvilsmeier/sqinn-go/actions/workflows/linux.yml/badge.svg)](https://github.com/cvilsmeier/sqinn-go/actions/workflows/linux.yml)
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](http://unlicense.org/)
 [![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 
 Sqinn-Go is a Go (Golang) library for accessing SQLite databases without cgo.
-It uses Sqinn <https://github.com/cvilsmeier/sqinn> under the hood.
-It starts Sqinn as a child process (`os/exec`) and communicates with
-Sqinn over stdin/stdout/stderr. The Sqinn child process then does the SQLite
+It uses Sqinn2 <https://github.com/cvilsmeier/sqinn2> under the hood.
+It starts Sqinn2 as a child process (`os/exec`) and communicates with
+Sqinn2 over stdin/stdout/stderr. The Sqinn2 child process then does the SQLite
 work.
 
 If you want SQLite but do not want cgo, Sqinn-Go can be a solution.
@@ -25,66 +25,64 @@ Usage
 ------------------------------------------------------------------------------
 
 ```
-$ go get -u github.com/cvilsmeier/sqinn-go/sqinn
+$ go get -u github.com/cvilsmeier/sqinn-go/v2
 ```
 
 ```go
-import "github.com/cvilsmeier/sqinn-go/sqinn"
+import (
+	"fmt"
+	"github.com/cvilsmeier/sqinn-go/v2"
+)
 
-// Simple sqinn-go usage. Error handling is left out for brevity.
 func main() {
-
-	// Launch sqinn. Terminate at program exit.
-	sq := sqinn.MustLaunch(sqinn.Options{})
-	defer sq.Terminate()
-
-	// Open database. Close when we're done.
-	sq.MustOpen("./users.db")
+	// Launch sqinn.
+	sq := sqinn.MustLaunch(sqinn.Options{
+		Db: ":memory:", // use a transient in-memory database
+	})
 	defer sq.Close()
-
-	// Create a table.
-	sq.MustExecOne("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
-
-	// Insert users.
-	sq.MustExecOne("INSERT INTO users (id, name) VALUES (1, 'Alice')")
-	sq.MustExecOne("INSERT INTO users (id, name) VALUES (2, 'Bob')")
-
-	// Query users.
-	rows := sq.MustQuery("SELECT id, name FROM users ORDER BY id", nil, []byte{sqinn.ValInt, sqinn.ValText})
-	for _, row := range rows {
-		fmt.Printf("id=%d, name=%s\n", row.Values[0].AsInt(), row.Values[1].AsString())
+	// Create a table, cleanup when done
+	sq.MustExecSql("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
+	defer sq.MustExecSql("DROP TABLE users")
+	// Insert users
+	sq.MustExec("INSERT INTO users (id, name) VALUES (?, ?)", [][]any{
+		{1, "Alice"},
+		{2, "Bob"},
+		{3, "Carol"},
+	})
+	// Query users
+	rows := sq.MustQuery(
+		"SELECT id, name FROM users WHERE id >= ? ORDER BY id",
+		[]any{0},                                // query parameters
+		[]byte{sqinn.ValInt32, sqinn.ValString}, // fetch id as int, name as string
+	)
+	for _, values := range rows {
+		fmt.Printf("user id=%d, name=%s\n", values[0].Int32, values[1].String)
 	}
-
 	// Output:
-	// id=1, name=Alice
-	// id=2, name=Bob
+	// user id=1, name=Alice
+	// user id=2, name=Bob
+	// user id=3, name=Carol
 }
 ```
 
-Before running that program, Sqinn must be installed on your system. The
-most convenient way is to download a pre-built binary from
-<https://github.com/cvilsmeier/sqinn/releases> and put it somewhere on
-your `$PATH`, or `%PATH%` on Windows.
+For usage examples, see `examples` directory.
 
-If you want to store the Sqinn binary in a non-PATH folder, you must
-specify it when opening a Sqinn connection:
+
+Building
+------------------------------------------------------------------------------
+
+The library uses a pre-built embedded build of sqinn2 for Linux/amd64 and
+Windows/amd64.
+
+If you do not want to use a pre-built sqinn2 binary, you can compile sqinn2
+yourself. See <https://github.com/cvilsmeier/sqinn2> for instructions.
+You must then specify the path to sqinn2 like so:
 
 ```go
-    // take from environment...
     sq := sqinn.MustLaunch(sqinn.Options{
-        SqinnPath: os.Getenv("SQINN_PATH"),
-    })
-
-    // ...or set path directly
-    sq := sqinn.MustLaunch(sqinn.Options{
-        SqinnPath: "/path/to/sqinn",
+        Sqinn2: "/path/to/sqinn2",
     })
 ```
-
-If you do not want to use a pre-built Sqinn binary, you can compile Sqinn
-yourself. See <https://github.com/cvilsmeier/sqinn> for instructions.
-
-For more usage examples, see file `sqinn/sqinn_examples_test.go`.
 
 
 Pros and Cons
@@ -108,27 +106,8 @@ Pros and Cons
 Performance
 ------------------------------------------------------------------------------
 
-Performance tests show that Sqinn-Go performance is comparable to cgo
-solutions, depending on the use case.
-
-For benchmarks I used `github.com/mattn/go-sqlite3` and `crawshaw.io/sqlite`.
-Numbers are given in milliseconds, lower numbers are better.
-
-                       mattn  crawshaw     sqinn
-    simple/insert       2901      2140      1563
-    simple/query        2239      1287      1390
-    complex/insert      2066      1817      1683
-    complex/query       1458      1129      1338
-    many/N=10             97        78       134
-    many/N=100           246       194       276
-    many/N=1000         1797      1240      1436
-    large/N=2000         119        87       341
-    large/N=4000         361       322       760
-    large/N=8000         701       650      1531
-    concurrent/N=2      1332       865       951    
-    concurrent/N=4      1505       989      1207    
-    concurrent/N=8      2347      1557      2044     
-
+Performance tests show that, for many use-cases, Sqinn-Go performance is better
+than cgo solutions.
 
 See <https://github.com/cvilsmeier/sqinn-go-bench> for details.
 
@@ -137,26 +116,19 @@ Testing
 ------------------------------------------------------------------------------
 
 Sqinn-Go comes with a large set of automated unit tests. Follow these steps to
-execute all tests on linux_amd64:
-
-Download and Install Sqinn
-
-	$ cd /tmp
-	$ curl -sL https://github.com/cvilsmeier/sqinn/releases/download/v1.1.27/dist-linux.zip >> dist-linux.zip && unzip dist-linux.zip
-	$ export SQINN_PATH=/tmp/sqinn
+execute all tests on linux/amd64 or windows/amd64:
 
 Get and test Sqinn-Go
 
-	$ go get -v -u github.com/cvilsmeier/sqinn-go/sqinn
-	$ go test github.com/cvilsmeier/sqinn-go/sqinn
+	$ go get -v -u github.com/cvilsmeier/sqinn-go/v2
+	$ go test github.com/cvilsmeier/sqinn-go/v2
 
 Check test coverage
 
-	$ go test github.com/cvilsmeier/sqinn-go/sqinn -coverprofile=./cover.out
-	$ go tool cover -func=./cover.out
+	$ go test github.com/cvilsmeier/sqinn-go/v2 -coverprofile=./cover.out
 	$ go tool cover -html=./cover.out
 
-Test coverage is ~85% (as of 2021-03-27)
+Test coverage is ~90% (as of August 2025)
 
 
 Discussion
@@ -220,6 +192,12 @@ returns, no active statements are hanging around.
 
 Changelog
 ------------------------------------------------------------------------------
+
+### v2.0.0
+
+- Major Version 2 (less memory, faster)
+- Uses https://github.com/cvilsmeier/sqinn2
+
 
 ### v1.2.0 (2023-10-05)
 

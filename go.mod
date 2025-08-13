@@ -1,3 +1,3 @@
-module github.com/cvilsmeier/sqinn-go
+module github.com/cvilsmeier/sqinn-go/v2
 
-go 1.19
+go 1.22
