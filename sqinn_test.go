@@ -255,7 +255,12 @@ func TestSqinnBadPath(t *testing.T) {
 	}
 	sq, err := Launch(opt)
 	isEq(t, nil, sq)
-	isErr(t, err, "exec: \"this_file_does_not_exist\": executable file not found in $PATH")
+	isTrue(t, err != nil, "want err but got nil")
+	errmsg := err.Error()
+	isTrue(t,
+		errmsg == "exec: \"this_file_does_not_exist\": executable file not found in $PATH" ||
+			errmsg == "exec: \"this_file_does_not_exist\": executable file not found in %PATH%",
+		"invalid errmsg %q", errmsg)
 }
 
 func TestMemoryReaderWriter(t *testing.T) {
@@ -1002,6 +1007,13 @@ func BenchmarkQueryUsers(b *testing.B) {
 }
 
 // assertion library
+
+func isTrue(t *testing.T, condition bool, format string, args ...any) {
+	t.Helper()
+	if !condition {
+		t.Fatalf(format, args...)
+	}
+}
 
 func isNoErr(t *testing.T, err error) {
 	t.Helper()
