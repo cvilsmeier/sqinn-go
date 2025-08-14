@@ -1,3 +1,8 @@
+/*
+Package sqinn provides interface to SQLite databases in Go without cgo.
+It uses Sqinn2 (http://github.com/cvilsmeier/sqinn2) for accessing SQLite
+databases. It is not a database/sql driver.
+*/
 package sqinn
 
 import (
@@ -19,9 +24,8 @@ import (
 // Options for launching a sqinn instance.
 type Options struct {
 	// Path to sqinn2 executable. Can be an absolute or relative path.
-	// The name ":prebuilt:" is a special name that selects prebuilt
-	// embedded sqinn2
-	// binary for linux/amd64 or windows/amd64.
+	// The name ":prebuilt:" is a special name that uses an embedded prebuilt
+	// sqinn2 binary for linux/amd64 and windows/amd64.
 	// Default is ":prebuilt:".
 	Sqinn2 string
 
@@ -47,9 +51,10 @@ type Options struct {
 }
 
 // Prebuilt is a special path that tells sqinn-go to use an embedded
-// pre-built sqinn2 for execution. If Prebuilt is chosen, sqinn-go
+// pre-built sqinn2 binary. If Prebuilt is chosen, sqinn-go
 // will extract sqinn2 into a temp directory and execute that.
 // Not all os/arch combinations are embedded, though.
+// Currently we have linux/amd64 and windows/amd64.
 const Prebuilt = ":prebuilt:"
 
 // Sqinn is a running sqinn instance.
@@ -67,7 +72,7 @@ var prebuiltLinux []byte
 //go:embed "prebuilt/windows/sqinn2.exe"
 var prebuiltWindows []byte
 
-// Launch launches a new sqinn subprocess. The [Options] specify
+// Launch launches a new sqinn2 subprocess. The [Options] specify
 // the sqinn2 executable, the database name, and logging options.
 // See [Options] for details.
 // If an error occurs, it returns (nil, err).
@@ -77,26 +82,24 @@ func Launch(opt Options) (*Sqinn, error) {
 	}
 	var tempname string
 	if opt.Sqinn2 == Prebuilt {
-		if (runtime.GOOS == "linux" || runtime.GOOS == "windows") && runtime.GOARCH == "amd64" {
-			tempdir, err := os.MkdirTemp("", "")
-			if err != nil {
-				return nil, err
-			}
-			if runtime.GOOS == "windows" {
-				tempname = filepath.Join(tempdir, "sqinn.exe")
-				if err := os.WriteFile(tempname, prebuiltWindows, 0755); err != nil {
-					return nil, err
-				}
-			} else {
-				tempname = filepath.Join(tempdir, "sqinn.exe")
-				if err := os.WriteFile(tempname, prebuiltLinux, 0755); err != nil {
-					return nil, err
-				}
-			}
-			opt.Sqinn2 = tempname
-		} else {
-			return nil, fmt.Errorf("no embedded prebuilt sqinn2 binary found for %s-%s, please see https://github.com/cvilsmeier/sqinn2 for build instructions", runtime.GOOS, runtime.GOARCH)
+		prebuiltMap := map[string][]byte{
+			"linux/amd64":   prebuiltLinux,
+			"windows/amd64": prebuiltWindows,
 		}
+		platform := runtime.GOOS + "/" + runtime.GOARCH
+		prebuilt, prebuiltFound := prebuiltMap[platform]
+		if !prebuiltFound {
+			return nil, fmt.Errorf("no embedded prebuilt sqinn2 binary found for %s, please see https://github.com/cvilsmeier/sqinn2 for build instructions", platform)
+		}
+		tempdir, err := os.MkdirTemp("", "")
+		if err != nil {
+			return nil, err
+		}
+		tempname = filepath.Join(tempdir, "sqinn2")
+		if err := os.WriteFile(tempname, prebuilt, 0755); err != nil {
+			return nil, err
+		}
+		opt.Sqinn2 = tempname
 	}
 	var cmdArgs []string
 	if opt.Loglevel > 0 {
@@ -151,30 +154,19 @@ func MustLaunch(opt Options) *Sqinn {
 	return must(Launch(opt))
 }
 
-// Exec executes a SQL statement, possibly multiple times.
+// ExecRaw executes a SQL statement, possibly multiple times.
 //
-// cvvvvv fix doc
-//
-// Niterations tells Exec how often to execute the SQL.
-// Niterations must be >= 0.
-// If niterations is 0, Exec is a NO-OP.
+// The niterations argument tells Exec how often to execute the SQL.
+// It must be >= 0.
+// If it is 0, ExecRaw is a NO-OP.
 //
 // Binding SQL sql parameters is possible with the nparams argument and the produce function.
-// The nparams argument tells Exec how many parameters to bind per iteration.
-// Nparams must be >= 0.
+// The nparams argument tells ExecRaw how many parameters to bind per iteration.
+// It must be >= 0.
 //
-// The produe function produces parameter values. Parameter values can be
+// The produce function produces parameter values. Parameter values can be
 // of the following type: int, int64, float64, string, blob or nil.
-// The length of values must always be niterations * nparams.
-//
-// Internally, Exec preapres a statement, binds nparams parameters, steps
-// the statement, resets the statement, binds the next nparams parameters,
-// and so on, until niterations is reached.
-//
-// Exec returns, for each iteration, the count of modified rows. The
-// resulting int slice will always be of length niterations.
-//
-// If an error occurs, it will return (nil, err).
+// The length of the params argument is always nparams.
 func (sq *Sqinn) ExecRaw(sql string, niterations, nparams int, produce func(iteration int, params []any)) error {
 	if niterations < 0 {
 		panic("invalid niterations < 0")
@@ -210,6 +202,7 @@ func (sq *Sqinn) ExecRaw(sql string, niterations, nparams int, produce func(iter
 	return sq.readOk()
 }
 
+// Exec calls ExecRaw with the provided paramRows.
 func (sq *Sqinn) Exec(sql string, paramRows [][]any) error {
 	niterations := len(paramRows)
 	if niterations == 0 {
@@ -246,6 +239,13 @@ func (sq *Sqinn) MustExecSql(sql string) {
 	must(0, sq.ExecSql(sql))
 }
 
+// QueryRaw executes a SQL statement and fetches the result rows.
+//
+// Params hold parameter values fdr the SQL statement, if any.
+//
+// Coltypes defines the types of the columns to be fetched.
+//
+// Result row values are then fed into the consume function.
 func (sq *Sqinn) QueryRaw(sql string, params []any, coltypes []byte, consume func(row int, values []Value)) error {
 	ncols := len(coltypes)
 	if ncols == 0 {
@@ -296,7 +296,7 @@ func (sq *Sqinn) QueryRaw(sql string, params []any, coltypes []byte, consume fun
 			}
 			switch val.Type {
 			case ValNull:
-				// no further data
+				// not further data
 			case ValInt32:
 				val.Int32, err = sq.r.readInt32()
 			case ValInt64:
@@ -320,6 +320,7 @@ func (sq *Sqinn) QueryRaw(sql string, params []any, coltypes []byte, consume fun
 	return sq.readOk()
 }
 
+// Query is like QueryRow but consumes all rows and returns them in a [][]Value array.
 func (sq *Sqinn) Query(sql string, params []any, coltypes []byte) ([][]Value, error) {
 	var rows [][]Value
 	err := sq.QueryRaw(sql, params, coltypes, func(row int, values []Value) {

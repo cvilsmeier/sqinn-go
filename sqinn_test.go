@@ -11,12 +11,12 @@ import (
 func TestSqinn(t *testing.T) {
 	opt := Options{
 		Sqinn2:   Prebuilt,
-		Loglevel: 2,
+		Loglevel: 0,
 		Log:      func(msg string) { t.Logf("SQINN2: %s", msg) },
 	}
 	sq := MustLaunch(opt)
 	t.Cleanup(func() {
-		// cvvvvvvvvv isNoErr(t, sq.Close())
+		isNoErr(t, sq.Close())
 	})
 	//
 	for _, sql := range []string{
@@ -193,7 +193,7 @@ func TestSqinn(t *testing.T) {
 		isEq(t, 0, values[0].Int32)
 	}))
 	//
-	// Exec must panic if arguments are wrong
+	// ExecRaw must panic if arguments are wrong
 	isPanic(t, "invalid niterations < 0", func() {
 		sq.ExecRaw("DELETE FROM users WHERE i=131313", -1, -1, nil)
 	})
@@ -204,7 +204,12 @@ func TestSqinn(t *testing.T) {
 		sq.ExecRaw("DELETE FROM users WHERE i=131313", 1, 1, nil)
 	})
 	//
-	// Query must panic if arguments are wrong
+	// Exec must panic if arguments are wrong
+	isPanic(t, "all paramRows must have same length", func() {
+		sq.Exec("DELETE FROM users WHERE i=?", [][]any{[]any{0, 0}, []any{0}})
+	})
+	//
+	// QueryRaw must panic if arguments are wrong
 	isPanic(t, "coltype ValNull not allowed in Query", func() {
 		sq.QueryRaw("SELECT COUNT(*) FROM users WHERE i = ?", nil, []byte{ValNull}, func(row int, values []Value) {})
 	})
@@ -239,11 +244,28 @@ func TestSqinnLog(t *testing.T) {
 		err := sq.Close()
 		isNoErr(t, err)
 	})
+	sq.MustExecSql("PRAGMA foreign_keys=1")
+	sq.MustExec("PRAGMA foreign_keys=1", [][]any{{}})
 	isNoErr(t, sq.QueryRaw("PRAGMA user_version", nil, []byte{ValInt32}, func(row int, values []Value) {
 		isEq(t, 0, row)
 		isEq(t, 1, len(values))
 		isEq(t, 0, values[0].Int32)
 	}))
+}
+
+func TestSqinnMust(t *testing.T) {
+	opt := Options{}
+	sq := MustLaunch(opt)
+	t.Cleanup(func() {
+		isNoErr(t, sq.Close())
+	})
+	sq.MustExecSql("PRAGMA foreign_keys=1")
+	sq.MustExec("PRAGMA foreign_keys=1", [][]any{{}})
+	rows := sq.MustQuery("PRAGMA user_version", nil, []byte{ValInt32})
+	isEq(t, 1, len(rows))
+	isEq(t, 1, len(rows[0]))
+	isEq(t, ValInt32, rows[0][0].Type)
+	isEq(t, 0, rows[0][0].Int32)
 }
 
 func TestSqinnBadPath(t *testing.T) {

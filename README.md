@@ -25,8 +25,8 @@ If you want SQLite but do not want cgo, Sqinn-Go can be a solution.
 Usage
 ------------------------------------------------------------------------------
 
-```
-$ go get -u github.com/cvilsmeier/sqinn-go/v2
+```bash
+go get -u github.com/cvilsmeier/sqinn-go/v2
 ```
 
 ```go
@@ -36,20 +36,23 @@ import (
 )
 
 func main() {
-	// Launch sqinn.
+	// Launch sqinn, close when done.
 	sq := sqinn.MustLaunch(sqinn.Options{
 		Db: ":memory:", // use a transient in-memory database
 	})
 	defer sq.Close()
+	//
 	// Create a table, cleanup when done
-	sq.MustExecSql("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR)")
+	sq.MustExecSql("CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name TEXT)")
 	defer sq.MustExecSql("DROP TABLE users")
+	//
 	// Insert users
 	sq.MustExec("INSERT INTO users (id, name) VALUES (?, ?)", [][]any{
 		{1, "Alice"},
 		{2, "Bob"},
 		{3, "Carol"},
 	})
+	//
 	// Query users
 	rows := sq.MustQuery(
 		"SELECT id, name FROM users WHERE id >= ? ORDER BY id",
@@ -59,6 +62,7 @@ func main() {
 	for _, values := range rows {
 		fmt.Printf("user id=%d, name=%s\n", values[0].Int32, values[1].String)
 	}
+	//
 	// Output:
 	// user id=1, name=Alice
 	// user id=2, name=Bob
@@ -197,7 +201,7 @@ Changelog
 ### v2.0.0
 
 - Major Version 2 (less memory, faster)
-- Uses https://github.com/cvilsmeier/sqinn2
+- Uses sqinn2
 
 
 ### v1.2.0 (2023-10-05)
