@@ -86,6 +86,10 @@ func Launch(opt Options) (*Sqinn, error) {
 			"linux/amd64":   prebuiltLinux,
 			"windows/amd64": prebuiltWindows,
 		}
+		filenameMap := map[string]string{
+			"linux":   "sqinn2",
+			"windows": "sqinn2.exe",
+		}
 		platform := runtime.GOOS + "/" + runtime.GOARCH
 		prebuilt, prebuiltFound := prebuiltMap[platform]
 		if !prebuiltFound {
@@ -95,7 +99,7 @@ func Launch(opt Options) (*Sqinn, error) {
 		if err != nil {
 			return nil, err
 		}
-		tempname = filepath.Join(tempdir, "sqinn2")
+		tempname = filepath.Join(tempdir, filenameMap[runtime.GOOS])
 		if err := os.WriteFile(tempname, prebuilt, 0755); err != nil {
 			return nil, err
 		}
