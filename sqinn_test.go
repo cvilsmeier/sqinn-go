@@ -10,9 +10,9 @@ import (
 
 func TestSqinn(t *testing.T) {
 	opt := Options{
-		Sqinn2:   Prebuilt,
+		Sqinn:    Prebuilt,
 		Loglevel: 0,
-		Log:      func(msg string) { t.Logf("SQINN2: %s", msg) },
+		Log:      func(msg string) { t.Logf("SQINN: %s", msg) },
 	}
 	sq := MustLaunch(opt)
 	t.Cleanup(func() {
@@ -234,7 +234,7 @@ func TestSqinn(t *testing.T) {
 
 func TestSqinnLog(t *testing.T) {
 	opt := Options{
-		Sqinn2:   "", // prebuilt
+		Sqinn:    "", // prebuilt
 		Loglevel: 0,
 		Log:      func(msg string) { t.Log(msg) },
 		Db:       ":memory:",
@@ -270,7 +270,7 @@ func TestSqinnMust(t *testing.T) {
 
 func TestSqinnBadPath(t *testing.T) {
 	opt := Options{
-		Sqinn2:   "this_file_does_not_exist",
+		Sqinn:    "this_file_does_not_exist",
 		Loglevel: 1,
 		Logfile:  "/dev/null",
 		Db:       ":memory:",

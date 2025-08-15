@@ -9,9 +9,9 @@
 [![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 
 Sqinn-Go is a Go (Golang) library for accessing SQLite databases without cgo.
-It uses Sqinn2 <https://github.com/cvilsmeier/sqinn2> under the hood.
-It starts Sqinn2 as a child process (`os/exec`) and communicates with
-Sqinn2 over stdin/stdout/stderr. The Sqinn2 child process then does the SQLite
+It uses Sqinn <https://github.com/cvilsmeier/sqinn> under the hood.
+It starts Sqinn as a child process (`os/exec`) and communicates with
+Sqinn over stdin/stdout/stderr. The Sqinn child process then does the SQLite
 work.
 
 If you want SQLite but do not want cgo, Sqinn-Go can be a solution.
@@ -76,16 +76,16 @@ For usage examples, see `examples` directory.
 Building
 ------------------------------------------------------------------------------
 
-The library uses a pre-built embedded build of sqinn2 for Linux/amd64 and
+The library uses a pre-built embedded build of sqinn for Linux/amd64 and
 Windows/amd64.
 
-If you do not want to use a pre-built sqinn2 binary, you can compile sqinn2
-yourself. See <https://github.com/cvilsmeier/sqinn2> for instructions.
-You must then specify the path to sqinn2 like so:
+If you do not want to use a pre-built sqinn binary, you can compile sqinn
+yourself. See <https://github.com/cvilsmeier/sqinn> for instructions.
+You must then specify the path to sqinn like so:
 
 ```go
     sq := sqinn.MustLaunch(sqinn.Options{
-        Sqinn2: "/path/to/sqinn2",
+        Sqinn: "/path/to/sqinn",
     })
 ```
 
@@ -201,7 +201,7 @@ Changelog
 ### v2.0.0
 
 - Major Version 2 (less memory, faster)
-- Uses sqinn2
+- Uses sqinn
 
 
 ### v1.2.0 (2023-10-05)

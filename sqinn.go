@@ -1,6 +1,6 @@
 /*
 Package sqinn provides interface to SQLite databases in Go without cgo.
-It uses Sqinn2 (http://github.com/cvilsmeier/sqinn2) for accessing SQLite
+It uses Sqinn (http://github.com/cvilsmeier/sqinn) for accessing SQLite
 databases. It is not a database/sql driver.
 */
 package sqinn
@@ -23,11 +23,17 @@ import (
 
 // Options for launching a sqinn instance.
 type Options struct {
-	// Path to sqinn2 executable. Can be an absolute or relative path.
+	// Path to sqinn executable. Can be an absolute or relative path.
 	// The name ":prebuilt:" is a special name that uses an embedded prebuilt
-	// sqinn2 binary for linux/amd64 and windows/amd64.
+	// sqinn binary for linux/amd64 and windows/amd64.
 	// Default is ":prebuilt:".
-	Sqinn2 string
+	Sqinn string
+
+	// The database filename. It can be a file system path, e.g. "/tmp/test.db",
+	// or a special name like ":memory:".
+	// For further details, see https://www.sqlite.org/c3ref/open.html.
+	// Default is ":memory:".
+	Db string
 
 	// The loglevel. Can be 0 (off), 1 (info) or 2 (debug).
 	// Default is 0 (off).
@@ -42,17 +48,11 @@ type Options struct {
 	// Log can be nil, then nothing will be logged
 	// Default is nil.
 	Log func(msg string)
-
-	// The database filename. It can be a file system path, e.g. "/tmp/test.db",
-	// or a special name like ":memory:".
-	// For further details, see https://www.sqlite.org/c3ref/open.html.
-	// Default is ":memory:".
-	Db string
 }
 
 // Prebuilt is a special path that tells sqinn-go to use an embedded
-// pre-built sqinn2 binary. If Prebuilt is chosen, sqinn-go
-// will extract sqinn2 into a temp directory and execute that.
+// pre-built sqinn binary. If Prebuilt is chosen, sqinn-go
+// will extract sqinn into a temp directory and execute that.
 // Not all os/arch combinations are embedded, though.
 // Currently we have linux/amd64 and windows/amd64.
 const Prebuilt = ":prebuilt:"
@@ -66,34 +66,34 @@ type Sqinn struct {
 	r        *reader
 }
 
-//go:embed "prebuilt/linux/sqinn2"
+//go:embed "prebuilt/linux/sqinn"
 var prebuiltLinux []byte
 
-//go:embed "prebuilt/windows/sqinn2.exe"
+//go:embed "prebuilt/windows/sqinn.exe"
 var prebuiltWindows []byte
 
-// Launch launches a new sqinn2 subprocess. The [Options] specify
-// the sqinn2 executable, the database name, and logging options.
+// Launch launches a new sqinn subprocess. The [Options] specify
+// the sqinn executable, the database name, and logging options.
 // See [Options] for details.
 // If an error occurs, it returns (nil, err).
 func Launch(opt Options) (*Sqinn, error) {
-	if opt.Sqinn2 == "" {
-		opt.Sqinn2 = Prebuilt
+	if opt.Sqinn == "" {
+		opt.Sqinn = Prebuilt
 	}
 	var tempname string
-	if opt.Sqinn2 == Prebuilt {
+	if opt.Sqinn == Prebuilt {
 		prebuiltMap := map[string][]byte{
 			"linux/amd64":   prebuiltLinux,
 			"windows/amd64": prebuiltWindows,
 		}
 		filenameMap := map[string]string{
-			"linux":   "sqinn2",
-			"windows": "sqinn2.exe",
+			"linux":   "sqinn",
+			"windows": "sqinn.exe",
 		}
 		platform := runtime.GOOS + "/" + runtime.GOARCH
 		prebuilt, prebuiltFound := prebuiltMap[platform]
 		if !prebuiltFound {
-			return nil, fmt.Errorf("no embedded prebuilt sqinn2 binary found for %s, please see https://github.com/cvilsmeier/sqinn2 for build instructions", platform)
+			return nil, fmt.Errorf("no embedded prebuilt sqinn binary found for %s, please see https://github.com/cvilsmeier/sqinn for build instructions", platform)
 		}
 		tempdir, err := os.MkdirTemp("", "")
 		if err != nil {
@@ -103,9 +103,13 @@ func Launch(opt Options) (*Sqinn, error) {
 		if err := os.WriteFile(tempname, prebuilt, 0755); err != nil {
 			return nil, err
 		}
-		opt.Sqinn2 = tempname
+		opt.Sqinn = tempname
 	}
 	var cmdArgs []string
+	cmdArgs = append(cmdArgs, "run")
+	if opt.Db != "" {
+		cmdArgs = append(cmdArgs, "-db", opt.Db)
+	}
 	if opt.Loglevel > 0 {
 		cmdArgs = append(cmdArgs, "-loglevel", strconv.Itoa(opt.Loglevel))
 	}
@@ -115,11 +119,7 @@ func Launch(opt Options) (*Sqinn, error) {
 	if opt.Log != nil {
 		cmdArgs = append(cmdArgs, "-logstderr")
 	}
-	if opt.Db != "" {
-		cmdArgs = append(cmdArgs, "-db", opt.Db)
-	}
-	cmdArgs = append(cmdArgs, "-run")
-	cmd := exec.Command(opt.Sqinn2, cmdArgs...)
+	cmd := exec.Command(opt.Sqinn, cmdArgs...)
 	stdinPipe, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -140,7 +140,7 @@ func Launch(opt Options) (*Sqinn, error) {
 		go func() {
 			sca := bufio.NewScanner(stderrPipe)
 			for sca.Scan() {
-				opt.Log("[sqinn2] " + sca.Text())
+				opt.Log("[sqinn] " + sca.Text())
 			}
 			if err := sca.Err(); err != nil {
 				opt.Log(fmt.Sprintf("cannot read sqinn stderr: %s", err))
