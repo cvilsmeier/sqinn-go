@@ -41,12 +41,12 @@ type Options struct {
 
 	// Logfile is the filename to which sqinn will print log messages.
 	// This is used for debugging and should normally be empty.
-	// Default no log file.
+	// Default is empty (no log file).
 	Logfile string
 
 	// Log is a function that prints a log message from the sqinn process.
 	// Log can be nil, then nothing will be logged
-	// Default is nil.
+	// Default is nil (no logging).
 	Log func(msg string)
 }
 
@@ -158,20 +158,29 @@ func MustLaunch(opt Options) *Sqinn {
 	return must(Launch(opt))
 }
 
-// ExecRaw executes a SQL statement, possibly multiple times.
+// ProduceFunc is a callback function that is called by Exec exactly
+// once for each iteration.
+// Iteration is the iteration index, starting at 0.
+// Params is a slice that holds parameter values for this iteration,
+// and should be set by the function body.
+type ProduceFunc func(iteration int, params []any)
+
+// Exec executes a SQL statement, possibly multiple times.
 //
 // The niterations argument tells Exec how often to execute the SQL.
 // It must be >= 0.
-// If it is 0, ExecRaw is a NO-OP.
+// If it is 0, Exec is a NO-OP.
 //
-// Binding SQL sql parameters is possible with the nparams argument and the produce function.
-// The nparams argument tells ExecRaw how many parameters to bind per iteration.
+// Binding SQL sql parameters is possible with the nparams argument
+// and the produce function.
+//
+// The nparams argument tells Exec how many parameters to bind per iteration.
 // It must be >= 0.
 //
 // The produce function produces parameter values. Parameter values can be
 // of the following type: int, int64, float64, string, blob or nil.
 // The length of the params argument is always nparams.
-func (sq *Sqinn) ExecRaw(sql string, niterations, nparams int, produce func(iteration int, params []any)) error {
+func (sq *Sqinn) Exec(sql string, niterations, nparams int, produce ProduceFunc) error {
 	if niterations < 0 {
 		panic("invalid niterations < 0")
 	}
@@ -206,8 +215,13 @@ func (sq *Sqinn) ExecRaw(sql string, niterations, nparams int, produce func(iter
 	return sq.readOk()
 }
 
-// Exec calls ExecRaw with the provided paramRows.
-func (sq *Sqinn) Exec(sql string, paramRows [][]any) error {
+// MustExec is the same as Exec except it panics on error.
+func (sq *Sqinn) MustExec(sql string, niterations, nparams int, produce func(iteration int, params []any)) {
+	must(0, sq.Exec(sql, niterations, nparams, produce))
+}
+
+// ExecParams calls Exec with the provided paramRows.
+func (sq *Sqinn) ExecParams(sql string, paramRows [][]any) error {
 	niterations := len(paramRows)
 	if niterations == 0 {
 		// nothing to do
@@ -220,7 +234,7 @@ func (sq *Sqinn) Exec(sql string, paramRows [][]any) error {
 			panic("all paramRows must have same length")
 		}
 	}
-	return sq.ExecRaw(sql, niterations, nparams, func(iteration int, iterationParams []any) {
+	return sq.Exec(sql, niterations, nparams, func(iteration int, iterationParams []any) {
 		n := copy(iterationParams, paramRows[iteration])
 		if n != nparams {
 			panic(fmt.Sprintf("internal error: want %d params copied, but have only %d", nparams, n))
@@ -228,14 +242,14 @@ func (sq *Sqinn) Exec(sql string, paramRows [][]any) error {
 	})
 }
 
-// MustExec is the same as Exec except it panics on error.
-func (sq *Sqinn) MustExec(sql string, paramRows [][]any) {
-	must(0, sq.Exec(sql, paramRows))
+// MustExecParams is the same as ExecParams except it panics on error.
+func (sq *Sqinn) MustExecParams(sql string, paramRows [][]any) {
+	must(0, sq.ExecParams(sql, paramRows))
 }
 
 // ExecSql is the same as Exec(sql,1,0,nil).
 func (sq *Sqinn) ExecSql(sql string) error {
-	return sq.ExecRaw(sql, 1, 0, nil)
+	return sq.Exec(sql, 1, 0, nil)
 }
 
 // MustExecSql is the same as ExecSql except it panics on error.
@@ -243,14 +257,19 @@ func (sq *Sqinn) MustExecSql(sql string) {
 	must(0, sq.ExecSql(sql))
 }
 
-// QueryRaw executes a SQL statement and fetches the result rows.
+// ConsumeFunc is a callback function that is called by Query once for each result row.
+// Row is the row index, starting at 0.
+// Values contains the row values for this row.
+type ConsumeFunc func(row int, values []Value)
+
+// Query executes a SQL statement and fetches the result rows.
 //
-// Params hold parameter values fdr the SQL statement, if any.
+// Params hold parameter values for the SQL statement. It can be empty.
 //
 // Coltypes defines the types of the columns to be fetched.
 //
-// Result row values are then fed into the consume function.
-func (sq *Sqinn) QueryRaw(sql string, params []any, coltypes []byte, consume func(row int, values []Value)) error {
+// Consume is called exactly once for each result row.
+func (sq *Sqinn) Query(sql string, params []any, coltypes []byte, consume ConsumeFunc) error {
 	ncols := len(coltypes)
 	if ncols == 0 {
 		panic("no coltypes")
@@ -324,19 +343,19 @@ func (sq *Sqinn) QueryRaw(sql string, params []any, coltypes []byte, consume fun
 	return sq.readOk()
 }
 
-// Query is like QueryRow but consumes all rows and returns them in a [][]Value array.
-func (sq *Sqinn) Query(sql string, params []any, coltypes []byte) ([][]Value, error) {
+// QueryRows is like Query but consumes all rows and returns them in a [][]Value array.
+func (sq *Sqinn) QueryRows(sql string, params []any, coltypes []byte) ([][]Value, error) {
 	var rows [][]Value
-	err := sq.QueryRaw(sql, params, coltypes, func(row int, values []Value) {
+	err := sq.Query(sql, params, coltypes, func(row int, values []Value) {
 		vals := append(make([]Value, 0, len(values)), values...)
 		rows = append(rows, vals)
 	})
 	return rows, err
 }
 
-// MustQuery is the same as Query except it panics on error.
-func (sq *Sqinn) MustQuery(sql string, params []any, coltypes []byte) [][]Value {
-	return must(sq.Query(sql, params, coltypes))
+// MustQueryRows is the same as QueryRows except it panics on error.
+func (sq *Sqinn) MustQueryRows(sql string, params []any, coltypes []byte) [][]Value {
+	return must(sq.QueryRows(sql, params, coltypes))
 }
 
 // Close closes the database and terminates the sqinn process.

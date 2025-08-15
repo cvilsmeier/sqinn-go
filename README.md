@@ -47,14 +47,14 @@ func main() {
 	defer sq.MustExecSql("DROP TABLE users")
 	//
 	// Insert users
-	sq.MustExec("INSERT INTO users (id, name) VALUES (?, ?)", [][]any{
+	sq.MustExecParams("INSERT INTO users (id, name) VALUES (?, ?)", [][]any{
 		{1, "Alice"},
 		{2, "Bob"},
 		{3, "Carol"},
 	})
 	//
 	// Query users
-	rows := sq.MustQuery(
+	rows := sq.MustQueryRows(
 		"SELECT id, name FROM users WHERE id >= ? ORDER BY id",
 		[]any{0},                                // query parameters
 		[]byte{sqinn.ValInt32, sqinn.ValString}, // fetch id as int, name as string
@@ -84,9 +84,9 @@ yourself. See <https://github.com/cvilsmeier/sqinn> for instructions.
 You must then specify the path to sqinn like so:
 
 ```go
-    sq := sqinn.MustLaunch(sqinn.Options{
-        Sqinn: "/path/to/sqinn",
-    })
+sq := sqinn.MustLaunch(sqinn.Options{
+	Sqinn: "/path/to/sqinn",
+})
 ```
 
 
@@ -114,7 +114,7 @@ Performance
 Performance tests show that, for many use-cases, Sqinn-Go performance is better
 than cgo solutions.
 
-See <https://github.com/cvilsmeier/sqinn-go-bench> for details.
+See <https://github.com/cvilsmeier/go-sqlite-bench> for details.
 
 
 Testing
@@ -125,15 +125,21 @@ execute all tests on linux/amd64 or windows/amd64:
 
 Get and test Sqinn-Go
 
-	$ go get -v -u github.com/cvilsmeier/sqinn-go/v2
-	$ go test github.com/cvilsmeier/sqinn-go/v2
+```bash
+go mod init test
+go get -v -u github.com/cvilsmeier/sqinn-go/v2
+go test github.com/cvilsmeier/sqinn-go/v2
+```
+
 
 Check test coverage
 
-	$ go test github.com/cvilsmeier/sqinn-go/v2 -coverprofile=./cover.out
-	$ go tool cover -html=./cover.out
+```bash
+go test github.com/cvilsmeier/sqinn-go/v2 -coverprofile=cover.out
+go tool cover -html=cover.out
+```
 
-Test coverage is ~90% (as of August 2025)
+Test coverage is ~ 90% (as of August 2025)
 
 
 Discussion
@@ -146,8 +152,8 @@ cgo packages. However, Sqinn-Go has a runtime dependency on Sqinn, which is a
 program written in C. Sqinn has to be installed separately on each machine
 where a Sqinn-Go application is executing. For this to work, Sqinn has to be
 compiled for every target platform. As an alternative, pre-built Sqinn binaries
-for common platforms can be downloaded from the Sqinn releases page
-<https://github.com/cvilsmeier/sqinn/releases>.
+for common platforms are included in sqinn-go or can be downloaded from the
+Sqinn releases page <https://github.com/cvilsmeier/sqinn/releases>.
 
 
 ### No database/sql driver
@@ -166,33 +172,14 @@ used in favor of low-level fine-grained functions.
 ### Concurrency
 
 Sqinn/Sqinn-Go performs well in non-concurrent as well as concurrent settings,
-as shown in the Performance section. However, a single Sqinn instance
-should only be called from one goroutine. Exceptions are the Exec and Query
-methods, these are mutex'ed and goroutine safe. But, since Sqinn is inherently
-single-threaded, Exec and Query requests are served one-after-another.
+as shown in the performance section. However, a single Sqinn instance
+is inherently single-threaded, requests are served one-after-another.
 
 If you want true concurrency at the database level, you can spin up multiple
 Sqinn instances. You may even implement a connection pool. But be aware that
 when accessing a SQLite database concurrently, the dreaded SQLITE_BUSY error
 might occur. The PRAGMA busy_timeout might help to avoid SQLITE_BUSY errors.
 
-We recommend the following: Have one Sqinn instance. You may call Exec/Query on
-that single Sqinn instance from as many goroutines as you want. For
-long-running tasks (VACUUM, BACKUP, etc), spin up a second Sqinn instance on
-demand, and terminate it once the long-running work is done. Use PRAGMA
-busy_timeout to avoid SQLITE_BUSY.
-
-
-### Only one active statement at a time
-
-A Sqinn instance allows only one active statement at a time. A statement is
-*active* from the time it is prepared until it is finalized.  Before preparing
-a new statement, you have to finalize the current statement first, otherwise
-Sqinn will respond with an error.
-
-This is why we recommend using Exec/Query: These methods do a complete
-prepare-finalize cycle and the caller can be sure that, once Exec/Query
-returns, no active statements are hanging around.
 
 
 Changelog
@@ -200,8 +187,8 @@ Changelog
 
 ### v2.0.0
 
-- Major Version 2 (less memory, faster)
-- Uses sqinn
+- Major Version 2 (streaming protocol, less memory, faster)
+- Include prebuilt sqinn v2.0.0 (SQLite v3.50.4 (2025-07-30))
 
 
 ### v1.2.0 (2023-10-05)
@@ -234,30 +221,3 @@ Changelog
 ### v1.0.0 (2020-06-10)
 
 - First version.
-
-
-License
-------------------------------------------------------------------------------
-
-This is free and unencumbered software released into the public domain.
-
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
-software, either in source code form or as a compiled binary, for any purpose,
-commercial or non-commercial, and by any means.
-
-In jurisdictions that recognize copyright laws, the author or authors of this
-software dedicate any and all copyright interest in the software to the public
-domain. We make this dedication for the benefit of the public at large and to
-the detriment of our heirs and successors. We intend this dedication to be an
-overt act of relinquishment in perpetuity of all present and future rights to
-this software under copyright law.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-For more information, please refer to <https://unlicense.org>
-

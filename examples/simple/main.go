@@ -21,14 +21,14 @@ func main() {
 	defer sq.MustExecSql("DROP TABLE users")
 	//
 	// Insert users
-	sq.MustExec("INSERT INTO users (id, name) VALUES (?, ?)", [][]any{
+	sq.MustExecParams("INSERT INTO users (id, name) VALUES (?, ?)", [][]any{
 		{1, "Alice"},
 		{2, "Bob"},
 		{3, "Carol"},
 	})
 	//
 	// Query users
-	rows := sq.MustQuery(
+	rows := sq.MustQueryRows(
 		"SELECT id, name FROM users WHERE id >= ? ORDER BY id",
 		[]any{0},                                // query parameters
 		[]byte{sqinn.ValInt32, sqinn.ValString}, // fetch id as int, name as string

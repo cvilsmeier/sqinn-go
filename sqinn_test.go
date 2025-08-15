@@ -30,7 +30,7 @@ func TestSqinn(t *testing.T) {
 		isNoErr(t, sq.ExecSql(sql))
 	}
 	//
-	isNoErr(t, sq.ExecRaw("INSERT INTO users (i,j,d,t,b) VALUES(?,?,?,?,?)", 3, 5, func(iteration int, params []any) {
+	isNoErr(t, sq.Exec("INSERT INTO users (i,j,d,t,b) VALUES(?,?,?,?,?)", 3, 5, func(iteration int, params []any) {
 		isEq(t, 5, len(params))
 		switch iteration {
 		case 0:
@@ -55,7 +55,7 @@ func TestSqinn(t *testing.T) {
 			t.Fatal("wrong iteration ", iteration)
 		}
 	}))
-	isNoErr(t, sq.ExecRaw("UPDATE users SET t=? WHERE i=?", 2, 2, func(iteration int, params []any) {
+	isNoErr(t, sq.Exec("UPDATE users SET t=? WHERE i=?", 2, 2, func(iteration int, params []any) {
 		isEq(t, 2, len(params))
 		switch iteration {
 		case 0:
@@ -68,28 +68,28 @@ func TestSqinn(t *testing.T) {
 			t.Fatal("wrong iteration ", iteration)
 		}
 	}))
-	isNoErr(t, sq.Exec("UPDATE users SET t=? WHERE i=?", [][]any{
+	isNoErr(t, sq.ExecParams("UPDATE users SET t=? WHERE i=?", [][]any{
 		{"hello1", 1},
 		{"hello2", 2},
 	}))
 	// Exec: niterations=0 is a NO-OP
-	isNoErr(t, sq.ExecRaw("UPDATE users SET t=? WHERE i=?", 0, 0, nil))
-	isNoErr(t, sq.Exec("UPDATE users SET t=? WHERE i=?", nil))
+	isNoErr(t, sq.Exec("UPDATE users SET t=? WHERE i=?", 0, 0, nil))
+	isNoErr(t, sq.ExecParams("UPDATE users SET t=? WHERE i=?", nil))
 	//
-	isNoErr(t, sq.QueryRaw("SELECT changes()", nil, []byte{ValInt32}, func(row int, values []Value) {
+	isNoErr(t, sq.Query("SELECT changes()", nil, []byte{ValInt32}, func(row int, values []Value) {
 		isEq(t, 0, row)
 		isEq(t, 1, len(values))
 		isEq(t, 1, values[0].Int32)
 	}))
 	//
-	isNoErr(t, sq.QueryRaw("SELECT COUNT(*) FROM users", nil, []byte{ValInt32}, func(row int, values []Value) {
+	isNoErr(t, sq.Query("SELECT COUNT(*) FROM users", nil, []byte{ValInt32}, func(row int, values []Value) {
 		isEq(t, 0, row)
 		isEq(t, 1, len(values))
 		isEq(t, 3, values[0].Int32)
 	}))
 	//
 	var rowCount int
-	isNoErr(t, sq.QueryRaw("SELECT i,j,d,t,b FROM users ORDER BY i", nil, []byte{ValInt32, ValInt64, ValDouble, ValString, ValBlob}, func(row int, values []Value) {
+	isNoErr(t, sq.Query("SELECT i,j,d,t,b FROM users ORDER BY i", nil, []byte{ValInt32, ValInt64, ValDouble, ValString, ValBlob}, func(row int, values []Value) {
 		isEq(t, 5, len(values))
 		switch row {
 		case 0:
@@ -118,7 +118,7 @@ func TestSqinn(t *testing.T) {
 	isEq(t, 3, rowCount)
 	//
 	// var rows [][]Value
-	rows, err := sq.Query("SELECT i,j,d,t,b FROM users ORDER BY i", nil, []byte{ValInt32, ValInt64, ValDouble, ValString, ValBlob})
+	rows, err := sq.QueryRows("SELECT i,j,d,t,b FROM users ORDER BY i", nil, []byte{ValInt32, ValInt64, ValDouble, ValString, ValBlob})
 	isNoErr(t, err)
 	isEq(t, 3, len(rows))
 	values := rows[0]
@@ -143,50 +143,50 @@ func TestSqinn(t *testing.T) {
 	isEq(t, "hello2", values[3].String)
 	isEq(t, "world2", string(values[4].Blob))
 	//
-	isNoErr(t, sq.QueryRaw("SELECT COUNT(*) FROM users WHERE i = ?", []any{2}, []byte{ValInt32}, func(row int, values []Value) {
+	isNoErr(t, sq.Query("SELECT COUNT(*) FROM users WHERE i = ?", []any{2}, []byte{ValInt32}, func(row int, values []Value) {
 		isEq(t, 0, row)
 		isEq(t, 1, len(values))
 		isEq(t, 1, values[0].Int32)
 	}))
 	//
-	isNoErr(t, sq.QueryRaw("SELECT COUNT(*) FROM users WHERE j = ?", []any{3}, []byte{ValInt64}, func(row int, values []Value) {
+	isNoErr(t, sq.Query("SELECT COUNT(*) FROM users WHERE j = ?", []any{3}, []byte{ValInt64}, func(row int, values []Value) {
 		isEq(t, 0, row)
 		isEq(t, 1, len(values))
 		isEq(t, 0, values[0].Int32)
 	}))
 	//
-	isNoErr(t, sq.QueryRaw("SELECT COUNT(*) FROM users WHERE j = ?", []any{2000}, []byte{ValInt32}, func(row int, values []Value) {
+	isNoErr(t, sq.Query("SELECT COUNT(*) FROM users WHERE j = ?", []any{2000}, []byte{ValInt32}, func(row int, values []Value) {
 		isEq(t, 0, row)
 		isEq(t, 1, len(values))
 		isEq(t, 1, values[0].Int32)
 	}))
 	//
-	isNoErr(t, sq.QueryRaw("SELECT COUNT(*) FROM users WHERE i IS NULL", []any{}, []byte{ValInt32}, func(row int, values []Value) {
+	isNoErr(t, sq.Query("SELECT COUNT(*) FROM users WHERE i IS NULL", []any{}, []byte{ValInt32}, func(row int, values []Value) {
 		isEq(t, 0, row)
 		isEq(t, 1, len(values))
 		isEq(t, 1, values[0].Int32)
 	}))
 	//
-	isNoErr(t, sq.QueryRaw("SELECT COUNT(*) FROM users WHERE d = ?", []any{1.5}, []byte{ValInt32}, func(row int, values []Value) {
+	isNoErr(t, sq.Query("SELECT COUNT(*) FROM users WHERE d = ?", []any{1.5}, []byte{ValInt32}, func(row int, values []Value) {
 		isEq(t, 0, row)
 		isEq(t, 1, len(values))
 		isEq(t, 1, values[0].Int32)
 	}))
 	//
-	isNoErr(t, sq.QueryRaw("SELECT COUNT(*) FROM users WHERE t = ?", []any{"hello2"}, []byte{ValInt32}, func(row int, values []Value) {
+	isNoErr(t, sq.Query("SELECT COUNT(*) FROM users WHERE t = ?", []any{"hello2"}, []byte{ValInt32}, func(row int, values []Value) {
 		isEq(t, 0, row)
 		isEq(t, 1, len(values))
 		isEq(t, 1, values[0].Int32)
 	}))
 	//
-	isNoErr(t, sq.QueryRaw("SELECT COUNT(*) FROM users WHERE b = ?", []any{[]byte("world1")}, []byte{ValInt32}, func(row int, values []Value) {
+	isNoErr(t, sq.Query("SELECT COUNT(*) FROM users WHERE b = ?", []any{[]byte("world1")}, []byte{ValInt32}, func(row int, values []Value) {
 		isEq(t, 0, row)
 		isEq(t, 1, len(values))
 		isEq(t, 1, values[0].Int32)
 	}))
 	//
 	// to few params, but that's ok
-	isNoErr(t, sq.QueryRaw("SELECT COUNT(*) FROM users WHERE i=?", nil, []byte{ValInt32}, func(row int, values []Value) {
+	isNoErr(t, sq.Query("SELECT COUNT(*) FROM users WHERE i=?", nil, []byte{ValInt32}, func(row int, values []Value) {
 		isEq(t, 0, row)
 		isEq(t, 1, len(values))
 		isEq(t, ValInt32, values[0].Type)
@@ -195,40 +195,40 @@ func TestSqinn(t *testing.T) {
 	//
 	// ExecRaw must panic if arguments are wrong
 	isPanic(t, "invalid niterations < 0", func() {
-		sq.ExecRaw("DELETE FROM users WHERE i=131313", -1, -1, nil)
+		sq.Exec("DELETE FROM users WHERE i=131313", -1, -1, nil)
 	})
 	isPanic(t, "invalid nparams < 0", func() {
-		sq.ExecRaw("DELETE FROM users WHERE i=131313", 1, -1, nil)
+		sq.Exec("DELETE FROM users WHERE i=131313", 1, -1, nil)
 	})
 	isPanic(t, "invalid nparams > 0 && produce == nil", func() {
-		sq.ExecRaw("DELETE FROM users WHERE i=131313", 1, 1, nil)
+		sq.Exec("DELETE FROM users WHERE i=131313", 1, 1, nil)
 	})
 	//
 	// Exec must panic if arguments are wrong
 	isPanic(t, "all paramRows must have same length", func() {
-		sq.Exec("DELETE FROM users WHERE i=?", [][]any{[]any{0, 0}, []any{0}})
+		sq.ExecParams("DELETE FROM users WHERE i=?", [][]any{[]any{0, 0}, []any{0}})
 	})
 	//
 	// QueryRaw must panic if arguments are wrong
 	isPanic(t, "coltype ValNull not allowed in Query", func() {
-		sq.QueryRaw("SELECT COUNT(*) FROM users WHERE i = ?", nil, []byte{ValNull}, func(row int, values []Value) {})
+		sq.Query("SELECT COUNT(*) FROM users WHERE i = ?", nil, []byte{ValNull}, func(row int, values []Value) {})
 	})
 	isPanic(t, "nil param not allowed in Query", func() {
-		sq.QueryRaw("SELECT COUNT(*) FROM users WHERE i=?", []any{nil}, []byte{ValInt32}, func(row int, values []Value) {})
+		sq.Query("SELECT COUNT(*) FROM users WHERE i=?", []any{nil}, []byte{ValInt32}, func(row int, values []Value) {})
 	})
 	isPanic(t, "no coltypes", func() {
-		sq.QueryRaw("SELECT COUNT(*) FROM users", []any{}, []byte{}, func(row int, values []Value) {})
+		sq.Query("SELECT COUNT(*) FROM users", []any{}, []byte{}, func(row int, values []Value) {})
 	})
 	isPanic(t, "no consume func", func() {
-		sq.QueryRaw("SELECT COUNT(*) FROM users", []any{}, []byte{ValInt32}, nil)
+		sq.Query("SELECT COUNT(*) FROM users", []any{}, []byte{ValInt32}, nil)
 	})
 	//
 	// Query errors
-	err = sq.QueryRaw("SELECT COUNT(*) FROM unknown_table_name WHERE hoob = 1", nil, []byte{ValInt32}, func(row int, values []Value) {})
+	err = sq.Query("SELECT COUNT(*) FROM unknown_table_name WHERE hoob = 1", nil, []byte{ValInt32}, func(row int, values []Value) {})
 	isErr(t, err, "no such table: unknown_table_name")
-	err = sq.QueryRaw("SELECT COUNT(*) FROM users WHERE hoob = 1", nil, []byte{ValInt32}, func(row int, values []Value) {})
+	err = sq.Query("SELECT COUNT(*) FROM users WHERE hoob = 1", nil, []byte{ValInt32}, func(row int, values []Value) {})
 	isErr(t, err, "no such column: hoob")
-	err = sq.QueryRaw("SELECT COUNT(*) FROM users", []any{1}, []byte{ValInt32, ValInt32}, func(row int, values []Value) {})
+	err = sq.Query("SELECT COUNT(*) FROM users", []any{1}, []byte{ValInt32, ValInt32}, func(row int, values []Value) {})
 	isErr(t, err, "column index out of range")
 }
 
@@ -245,8 +245,8 @@ func TestSqinnLog(t *testing.T) {
 		isNoErr(t, err)
 	})
 	sq.MustExecSql("PRAGMA foreign_keys=1")
-	sq.MustExec("PRAGMA foreign_keys=1", [][]any{{}})
-	isNoErr(t, sq.QueryRaw("PRAGMA user_version", nil, []byte{ValInt32}, func(row int, values []Value) {
+	sq.MustExecParams("PRAGMA foreign_keys=1", [][]any{{}})
+	isNoErr(t, sq.Query("PRAGMA user_version", nil, []byte{ValInt32}, func(row int, values []Value) {
 		isEq(t, 0, row)
 		isEq(t, 1, len(values))
 		isEq(t, 0, values[0].Int32)
@@ -260,8 +260,8 @@ func TestSqinnMust(t *testing.T) {
 		isNoErr(t, sq.Close())
 	})
 	sq.MustExecSql("PRAGMA foreign_keys=1")
-	sq.MustExec("PRAGMA foreign_keys=1", [][]any{{}})
-	rows := sq.MustQuery("PRAGMA user_version", nil, []byte{ValInt32})
+	sq.MustExecParams("PRAGMA foreign_keys=1", [][]any{{}})
+	rows := sq.MustQueryRows("PRAGMA user_version", nil, []byte{ValInt32})
 	isEq(t, 1, len(rows))
 	isEq(t, 1, len(rows[0]))
 	isEq(t, ValInt32, rows[0][0].Type)
@@ -886,7 +886,7 @@ func BenchmarkInsertUsers(b *testing.B) {
 			sq.MustExecSql("DELETE FROM users")
 			sq.MustExecSql("VACUUM")
 			sq.MustExecSql("BEGIN IMMEDIATE")
-			err := sq.ExecRaw("INSERT INTO users(id,name) VALUES(?,?)", nusers, 2, func(iteration int, params []any) {
+			err := sq.Exec("INSERT INTO users(id,name) VALUES(?,?)", nusers, 2, func(iteration int, params []any) {
 				userId := iteration + 1
 				params[0] = userId
 				params[1] = fmt.Sprintf("User %d", userId)
@@ -924,7 +924,7 @@ func BenchmarkInsertUsers(b *testing.B) {
 				userId := iuser + 1
 				paramRows = append(paramRows, []any{userId, fmt.Sprintf("User %d", userId)})
 			}
-			sq.MustExec("INSERT INTO users(id,name) VALUES(?,?)", paramRows)
+			sq.MustExecParams("INSERT INTO users(id,name) VALUES(?,?)", paramRows)
 			sq.MustExecSql("COMMIT")
 		}
 	})
@@ -955,14 +955,14 @@ func BenchmarkQueryUsers(b *testing.B) {
 			userId := iuser + 1
 			paramRows = append(paramRows, []any{userId, fmt.Sprintf("User %d", userId)})
 		}
-		sq.MustExec("INSERT INTO users(id,name) VALUES(?,?)", paramRows)
+		sq.MustExecParams("INSERT INTO users(id,name) VALUES(?,?)", paramRows)
 		sq.MustExecSql("COMMIT")
 		// benchmark: query N users
 		b.ResetTimer()
 		for range b.N {
 			sq.MustExecSql("BEGIN IMMEDIATE")
 			var rowCount int
-			err := sq.QueryRaw("SELECT id,name FROM users ORDER BY id", nil, []byte{ValInt32, ValString}, func(row int, values []Value) {
+			err := sq.Query("SELECT id,name FROM users ORDER BY id", nil, []byte{ValInt32, ValString}, func(row int, values []Value) {
 				rowCount++
 				if len(values) != 2 {
 					b.Fatal("wrong len(values)")
@@ -1004,13 +1004,13 @@ func BenchmarkQueryUsers(b *testing.B) {
 			userId := iuser + 1
 			paramRows = append(paramRows, []any{userId, fmt.Sprintf("User %d", userId)})
 		}
-		sq.MustExec("INSERT INTO users(id,name) VALUES(?,?)", paramRows)
+		sq.MustExecParams("INSERT INTO users(id,name) VALUES(?,?)", paramRows)
 		sq.MustExecSql("COMMIT")
 		// benchmark: query N users
 		b.ResetTimer()
 		for range b.N {
 			sq.MustExecSql("BEGIN IMMEDIATE")
-			rows := sq.MustQuery("SELECT id,name FROM users ORDER BY id", nil, []byte{ValInt32, ValString})
+			rows := sq.MustQueryRows("SELECT id,name FROM users ORDER BY id", nil, []byte{ValInt32, ValString})
 			if len(rows) != nusers {
 				b.Fatalf("wrong len(rows) %d", len(rows))
 			}
