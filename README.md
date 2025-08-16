@@ -1,7 +1,7 @@
 
 ![Sqinn](logo.png "Sqinn")
 
-[![GoDoc Reference](https://godoc.org/github.com/cvilsmeier/sqinn-go/sqinn?status.svg)](http://godoc.org/github.com/cvilsmeier/sqinn-go/sqinn)
+[![GoDoc Reference](https://pkg.go.dev/badge/github.com/cvilsmeier/sqinn-go/v2)](http://godoc.org/github.com/cvilsmeier/sqinn-go/v2)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cvilsmeier/sqinn-go)](https://goreportcard.com/report/github.com/cvilsmeier/sqinn-go)
 [![Build Status](https://github.com/cvilsmeier/sqinn-go/actions/workflows/linux.yml/badge.svg)](https://github.com/cvilsmeier/sqinn-go/actions/workflows/linux.yml)
 [![Build Status](https://github.com/cvilsmeier/sqinn-go/actions/workflows/windows.yml/badge.svg)](https://github.com/cvilsmeier/sqinn-go/actions/workflows/windows.yml)
