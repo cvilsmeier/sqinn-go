@@ -162,8 +162,8 @@ func MustLaunch(opt Options) *Sqinn {
 // once for each iteration.
 // Iteration is the iteration index, starting at 0.
 // Params is a slice that holds parameter values for this iteration,
-// and should be set by the function body.
-type ProduceFunc func(iteration int, params []any)
+// and must be set by the function body.
+type ProduceFunc func(iteration int, params []Value)
 
 // Exec executes a SQL statement, possibly multiple times.
 //
@@ -200,10 +200,10 @@ func (sq *Sqinn) Exec(sql string, niterations, nparams int, produce ProduceFunc)
 	sq.w.writeInt32(niterations) // int niterations
 	sq.w.writeInt32(nparams)     // int nparams
 	if nparams > 0 {
-		params := make([]any, nparams)
+		params := make([]Value, nparams)
 		for iteration := range niterations {
 			produce(iteration, params)
-			sq.writeParams(params) // []value params
+			sq.writeParams(params)
 			if err := sq.w.markFrame(); err != nil {
 				return err
 			}
@@ -216,26 +216,27 @@ func (sq *Sqinn) Exec(sql string, niterations, nparams int, produce ProduceFunc)
 }
 
 // MustExec is the same as Exec except it panics on error.
-func (sq *Sqinn) MustExec(sql string, niterations, nparams int, produce func(iteration int, params []any)) {
+func (sq *Sqinn) MustExec(sql string, niterations, nparams int, produce ProduceFunc) {
 	must(0, sq.Exec(sql, niterations, nparams, produce))
 }
 
-// ExecParams calls Exec with the provided paramRows.
-func (sq *Sqinn) ExecParams(sql string, paramRows [][]any) error {
-	niterations := len(paramRows)
+// ExecParams calls Exec with the provided params.
+// The length of the params slice must be niterations * nparams.
+func (sq *Sqinn) ExecParams(sql string, niterations, nparams int, params []Value) error {
+	// check len(params)
+	if len(params) != niterations*nparams {
+		panic(fmt.Sprintf("want %d x %d params but have %d", niterations, nparams, len(params)))
+	}
+	// nothing to do if niterations is 0
 	if niterations == 0 {
-		// nothing to do
 		return nil
 	}
-	nparams := len(paramRows[0])
-	// all paramRows must have same length
-	for _, params := range paramRows {
-		if len(params) != nparams {
-			panic("all paramRows must have same length")
+	return sq.Exec(sql, niterations, nparams, func(iteration int, iterationParams []Value) {
+		if len(iterationParams) != nparams {
+			panic(fmt.Sprintf("internal error: want %d iterationParams, but have only %d", nparams, len(iterationParams)))
 		}
-	}
-	return sq.Exec(sql, niterations, nparams, func(iteration int, iterationParams []any) {
-		n := copy(iterationParams, paramRows[iteration])
+		offset := iteration * nparams
+		n := copy(iterationParams, params[offset:offset+nparams])
 		if n != nparams {
 			panic(fmt.Sprintf("internal error: want %d params copied, but have only %d", nparams, n))
 		}
@@ -243,8 +244,8 @@ func (sq *Sqinn) ExecParams(sql string, paramRows [][]any) error {
 }
 
 // MustExecParams is the same as ExecParams except it panics on error.
-func (sq *Sqinn) MustExecParams(sql string, paramRows [][]any) {
-	must(0, sq.ExecParams(sql, paramRows))
+func (sq *Sqinn) MustExecParams(sql string, niterations, nparams int, params []Value) {
+	must(0, sq.ExecParams(sql, niterations, nparams, params))
 }
 
 // ExecSql is the same as Exec(sql,1,0,nil).
@@ -269,7 +270,7 @@ type ConsumeFunc func(row int, values []Value)
 // Coltypes defines the types of the columns to be fetched.
 //
 // Consume is called exactly once for each result row.
-func (sq *Sqinn) Query(sql string, params []any, coltypes []byte, consume ConsumeFunc) error {
+func (sq *Sqinn) Query(sql string, params []Value, coltypes []byte, consume ConsumeFunc) error {
 	ncols := len(coltypes)
 	if ncols == 0 {
 		panic("no coltypes")
@@ -278,7 +279,7 @@ func (sq *Sqinn) Query(sql string, params []any, coltypes []byte, consume Consum
 		panic("no consume func")
 	}
 	for _, param := range params {
-		if param == nil {
+		if param.Type == ValNull {
 			panic("nil param not allowed in Query")
 		}
 	}
@@ -343,8 +344,13 @@ func (sq *Sqinn) Query(sql string, params []any, coltypes []byte, consume Consum
 	return sq.readOk()
 }
 
+// MustQuery is the same as Query except it panics on error.
+func (sq *Sqinn) MustQuery(sql string, params []Value, coltypes []byte, consume ConsumeFunc) {
+	must(0, sq.Query(sql, params, coltypes, consume))
+}
+
 // QueryRows is like Query but consumes all rows and returns them in a [][]Value array.
-func (sq *Sqinn) QueryRows(sql string, params []any, coltypes []byte) ([][]Value, error) {
+func (sq *Sqinn) QueryRows(sql string, params []Value, coltypes []byte) ([][]Value, error) {
 	var rows [][]Value
 	err := sq.Query(sql, params, coltypes, func(row int, values []Value) {
 		vals := append(make([]Value, 0, len(values)), values...)
@@ -354,7 +360,7 @@ func (sq *Sqinn) QueryRows(sql string, params []any, coltypes []byte) ([][]Value
 }
 
 // MustQueryRows is the same as QueryRows except it panics on error.
-func (sq *Sqinn) MustQueryRows(sql string, params []any, coltypes []byte) [][]Value {
+func (sq *Sqinn) MustQueryRows(sql string, params []Value, coltypes []byte) [][]Value {
 	return must(sq.QueryRows(sql, params, coltypes))
 }
 
@@ -391,33 +397,27 @@ func (sq *Sqinn) readOk() error {
 	if err != nil {
 		return err
 	}
-	return fmt.Errorf("%s", errmsg)
+	return fmt.Errorf("sqinn: %s", errmsg)
 }
 
-func (sq *Sqinn) writeParams(params []any) {
+func (sq *Sqinn) writeParams(params []Value) {
 	for _, p := range params {
-		if p == nil {
-			sq.w.writeByte(ValNull)
-		} else {
-			switch v := p.(type) {
-			case int:
-				sq.w.writeByte(ValInt32)
-				sq.w.writeInt32(int(v))
-			case int64:
-				sq.w.writeByte(ValInt64)
-				sq.w.writeInt64(v)
-			case float64:
-				sq.w.writeByte(ValDouble)
-				sq.w.writeDouble(float64(v))
-			case string:
-				sq.w.writeByte(ValString)
-				sq.w.writeString(v)
-			case []byte:
-				sq.w.writeByte(ValBlob)
-				sq.w.writeBlob(v)
-			default:
-				panic(fmt.Sprintf("unknown param type %T", v))
-			}
+		sq.w.writeByte(p.Type)
+		switch p.Type {
+		case ValNull:
+			// no furhter data
+		case ValInt32:
+			sq.w.writeInt32(p.Int32)
+		case ValInt64:
+			sq.w.writeInt64(p.Int64)
+		case ValDouble:
+			sq.w.writeDouble(p.Double)
+		case ValString:
+			sq.w.writeString(p.String)
+		case ValBlob:
+			sq.w.writeBlob(p.Blob)
+		default:
+			panic(fmt.Sprintf("unknown param value type %T", p.Type))
 		}
 	}
 }
@@ -437,6 +437,24 @@ type Value struct {
 	String string  // For ValString
 	Blob   []byte  // For ValBlob
 }
+
+// NullValue creates a Value with type ValNull.
+func NullValue() Value { return Value{Type: ValNull} }
+
+// Int32Value creates a Value with type ValInt32.
+func Int32Value(v int) Value { return Value{Type: ValInt32, Int32: v} }
+
+// Int64Value creates a Value with type ValInt64.
+func Int64Value(v int64) Value { return Value{Type: ValInt64, Int64: v} }
+
+// DoubleValue creates a Value with type ValDouble.
+func DoubleValue(v float64) Value { return Value{Type: ValDouble, Double: v} }
+
+// StringValue creates a Value with type ValString.
+func StringValue(v string) Value { return Value{Type: ValString, String: v} }
+
+// BlobValue creates a Value with type ValBlob.
+func BlobValue(v []byte) Value { return Value{Type: ValBlob, Blob: v} }
 
 // Value types.
 const (
