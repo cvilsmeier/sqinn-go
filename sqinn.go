@@ -458,12 +458,12 @@ func BlobValue(v []byte) Value { return Value{Type: ValBlob, Blob: v} }
 
 // Value types.
 const (
-	ValNull   = 0
-	ValInt32  = 1
-	ValInt64  = 2
-	ValDouble = 3
-	ValString = 4
-	ValBlob   = 5
+	ValNull   byte = 0
+	ValInt32  byte = 1
+	ValInt64  byte = 2
+	ValDouble byte = 3
+	ValString byte = 4
+	ValBlob   byte = 5
 )
 
 // A writer encodes values into bytes and writes them to a io.Writer.

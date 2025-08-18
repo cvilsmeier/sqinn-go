@@ -181,6 +181,11 @@ might occur. The PRAGMA busy_timeout might help to avoid SQLITE_BUSY errors.
 Changelog
 ------------------------------------------------------------------------------
 
+### v2.0.1
+
+- ValXy const is now byte (was untyped)
+
+
 ### v2.0.0
 
 - Major Version 2 (streaming protocol, less memory, faster)
