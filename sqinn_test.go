@@ -2,6 +2,7 @@ package sqinn
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -291,6 +292,84 @@ func TestSqinnBadPath(t *testing.T) {
 		errmsg == "exec: \"this_file_does_not_exist\": executable file not found in $PATH" ||
 			errmsg == "exec: \"this_file_does_not_exist\": executable file not found in %PATH%",
 		"invalid errmsg %q", errmsg)
+}
+
+func TestScanner(t *testing.T) {
+	sc := Scan([]Value{
+		NullValue(),
+		Int32Value(1),
+		Int64Value(2),
+		DoubleValue(3.0),
+		StringValue("4"),
+		BlobValue([]byte{5}),
+	})
+	i32, ok := sc.NextInt32()
+	isEq(t, false, ok)
+	isEq(t, int(0), i32)
+	i32, ok = sc.NextInt32()
+	isEq(t, true, ok)
+	isEq(t, int(1), i32)
+	i64, ok := sc.NextInt64()
+	isEq(t, true, ok)
+	isEq(t, int64(2), i64)
+	f64, ok := sc.NextDouble()
+	isEq(t, true, ok)
+	isEq(t, float64(3.0), f64)
+	s, ok := sc.NextString()
+	isEq(t, true, ok)
+	isEq(t, "4", s)
+	b, ok := sc.NextBlob()
+	isEq(t, true, ok)
+	isEq(t, 1, len(b))
+	isEq(t, byte(5), b[0])
+	//
+	sc = Scan([]Value{
+		NullValue(),
+		Int32Value(1),
+		Int64Value(2),
+		DoubleValue(3.0),
+		StringValue("4"),
+		BlobValue([]byte{5}),
+	})
+	isEq(t, int(0), sc.Int32())
+	isEq(t, int(1), sc.Int32())
+	isEq(t, int64(2), sc.Int64())
+	isEq(t, float64(3.0), sc.Double())
+	isEq(t, "4", sc.String())
+	b = sc.Blob()
+	isEq(t, 1, len(b))
+	isEq(t, byte(5), b[0])
+}
+
+func TestBind(t *testing.T) {
+	values := Bind([]any{
+		nil,          // [0]
+		int(1),       // [1]
+		int64(2),     // [2]
+		float64(3.0), // [3]
+		"4",          // [4]
+		[]byte{5},    // [5]
+	})
+	isEq(t, 6, len(values))
+	isEq(t, ValNull, values[0].Type)
+	isEq(t, ValInt32, values[1].Type)
+	isEq(t, 1, values[1].Int32)
+	isEq(t, ValInt64, values[2].Type)
+	isEq(t, 2, values[2].Int64)
+	isEq(t, ValDouble, values[3].Type)
+	isEq(t, 3.0, values[3].Double)
+	isEq(t, ValString, values[4].Type)
+	isEq(t, "4", values[4].String)
+	isEq(t, ValBlob, values[5].Type)
+	isEq(t, 1, len(values[5].Blob))
+	isEq(t, 5, values[5].Blob[0])
+	//
+	values = Bind(nil)
+	isEq(t, 0, len(values))
+	//
+	isPanic(t, "sqinn.Bind(): wrong Go type", func() {
+		Bind([]any{false})
+	})
 }
 
 func TestMemoryReaderWriter(t *testing.T) {
@@ -870,6 +949,12 @@ func TestEncodeDecode(t *testing.T) {
 	isEq(t, -12345678.12345678, decodeDouble(p))
 }
 
+func TestMust(t *testing.T) {
+	isPanic(t, "an error", func() {
+		must(1, errors.New("an error"))
+	})
+}
+
 func BenchmarkInsertUsers(b *testing.B) {
 	const nusers = 10_000
 	b.Run("Exec", func(b *testing.B) {
@@ -1078,7 +1163,14 @@ func isPanic(t *testing.T, want string, f func()) {
 			t.Fatalf("want panic but did not panic")
 			return
 		}
-		isEq(t, want, r.(string))
+		switch rv := r.(type) {
+		case string:
+			isEq(t, want, rv)
+		case error:
+			isEq(t, want, rv.Error())
+		default:
+			t.Fatal("wrong panic type")
+		}
 	}()
 	f()
 	t.Fatalf("must not come here, want f() to panic")

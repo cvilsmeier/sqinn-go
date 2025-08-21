@@ -54,7 +54,7 @@ type Options struct {
 // will extract sqinn into a temp directory and execute that.
 // Not all os/arch combinations are embedded, though.
 // Currently we have linux/amd64 and windows/amd64.
-const Prebuilt = ":prebuilt:"
+const Prebuilt string = ":prebuilt:"
 
 // Sqinn is a running sqinn instance.
 type Sqinn struct {
@@ -442,6 +442,111 @@ const (
 	ValString byte = 4
 	ValBlob   byte = 5
 )
+
+// A Scanner scans Values.
+type Scanner struct {
+	values []Value
+	i      int
+}
+
+// Scan creates a Scanner with the provided values.
+func Scan(values []Value) *Scanner {
+	return &Scanner{values, -1}
+}
+
+// Next returns the next Value.
+func (s *Scanner) Next() Value {
+	s.i++
+	return s.values[s.i]
+}
+
+// NextInt32 returns the next values Int32 field and true if the value was not NULL, false if it was NULL.
+func (s *Scanner) NextInt32() (int, bool) {
+	v := s.Next()
+	return v.Int32, v.Type != ValNull
+}
+
+// NextInt64 returns the next values Int64 field and true if the value was not NULL, false if it was NULL.
+func (s *Scanner) NextInt64() (int64, bool) {
+	v := s.Next()
+	return v.Int64, v.Type != ValNull
+}
+
+// NextDouble returns the next values Double field and true if the value was not NULL, false if it was NULL.
+func (s *Scanner) NextDouble() (float64, bool) {
+	v := s.Next()
+	return v.Double, v.Type != ValNull
+}
+
+// NextString returns the next values String field and true if the value was not NULL, false if it was NULL.
+func (s *Scanner) NextString() (string, bool) {
+	v := s.Next()
+	return v.String, v.Type != ValNull
+}
+
+// NextBlob returns the next values Blob field and true if the value was not NULL, false if it was NULL.
+func (s *Scanner) NextBlob() ([]byte, bool) {
+	v := s.Next()
+	return v.Blob, v.Type != ValNull
+}
+
+// Int32 returns the next values Int32 field. It does not check for NULL.
+func (s *Scanner) Int32() int { return s.Next().Int32 }
+
+// Int64 returns the next values Int64 field. It does not check for NULL.
+func (s *Scanner) Int64() int64 { return s.Next().Int64 }
+
+// Double returns the next values Double field. It does not check for NULL.
+func (s *Scanner) Double() float64 { return s.Next().Double }
+
+// String returns the next values String field. It does not check for NULL.
+func (s *Scanner) String() string { return s.Next().String }
+
+// Blob returns the next values Blob field. It does not check for NULL.
+func (s *Scanner) Blob() []byte { return s.Next().Blob }
+
+// Bind converts Go types to sqinn Values. It supports the following Go types
+//
+//	nil  -> ValNull
+//	int  -> ValInt32
+//	int64  -> ValInt64
+//	float64  -> ValDouble
+//	string  -> ValString
+//	[]byte  -> ValBlob
+//
+// For any other Go type, it panics.
+func Bind(params []any) []Value {
+	if len(params) == 0 {
+		return nil
+	}
+	values := make([]Value, len(params))
+	for i, p := range params {
+		if p == nil {
+			values[i].Type = ValNull
+			continue // with next param
+		}
+		switch v := p.(type) {
+		case int:
+			values[i].Type = ValInt32
+			values[i].Int32 = v
+		case int64:
+			values[i].Type = ValInt64
+			values[i].Int64 = v
+		case float64:
+			values[i].Type = ValDouble
+			values[i].Double = v
+		case string:
+			values[i].Type = ValString
+			values[i].String = v
+		case []byte:
+			values[i].Type = ValBlob
+			values[i].Blob = v
+		default:
+			panic("sqinn.Bind(): wrong Go type")
+		}
+	}
+	return values
+}
 
 // A writer encodes values into bytes and writes them to a io.Writer.
 type writer struct {
