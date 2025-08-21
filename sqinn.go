@@ -8,17 +8,16 @@ package sqinn
 import (
 	"bufio"
 	"bytes"
-	_ "embed"
 	"fmt"
 	"io"
 	"math"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/cvilsmeier/sqinn-go/v2/prebuilt"
 )
 
 // Options for launching a sqinn instance.
@@ -59,18 +58,12 @@ const Prebuilt = ":prebuilt:"
 
 // Sqinn is a running sqinn instance.
 type Sqinn struct {
-	tempname string // for prebuilt
-	cmd      *exec.Cmd
-	mu       sync.Mutex
-	w        *writer
-	r        *reader
+	tempdir string // only for prebuilt: tempdir where sqinn(.exe) is extracted
+	cmd     *exec.Cmd
+	mu      sync.Mutex
+	w       *writer
+	r       *reader
 }
-
-//go:embed "prebuilt/linux/sqinn"
-var prebuiltLinux []byte
-
-//go:embed "prebuilt/windows/sqinn.exe"
-var prebuiltWindows []byte
 
 // Launch launches a new sqinn subprocess. The [Options] specify
 // the sqinn executable, the database name, and logging options.
@@ -80,30 +73,14 @@ func Launch(opt Options) (*Sqinn, error) {
 	if opt.Sqinn == "" {
 		opt.Sqinn = Prebuilt
 	}
-	var tempname string
+	var tempdir string
 	if opt.Sqinn == Prebuilt {
-		prebuiltMap := map[string][]byte{
-			"linux/amd64":   prebuiltLinux,
-			"windows/amd64": prebuiltWindows,
-		}
-		filenameMap := map[string]string{
-			"linux":   "sqinn",
-			"windows": "sqinn.exe",
-		}
-		platform := runtime.GOOS + "/" + runtime.GOARCH
-		prebuilt, prebuiltFound := prebuiltMap[platform]
-		if !prebuiltFound {
-			return nil, fmt.Errorf("no embedded prebuilt sqinn binary found for %s, please see https://github.com/cvilsmeier/sqinn for build instructions", platform)
-		}
-		tempdir, err := os.MkdirTemp("", "")
+		dirname, filename, err := prebuilt.Extract()
 		if err != nil {
 			return nil, err
 		}
-		tempname = filepath.Join(tempdir, filenameMap[runtime.GOOS])
-		if err := os.WriteFile(tempname, prebuilt, 0755); err != nil {
-			return nil, err
-		}
-		opt.Sqinn = tempname
+		tempdir = dirname
+		opt.Sqinn = filename
 	}
 	var cmdArgs []string
 	cmdArgs = append(cmdArgs, "run")
@@ -150,7 +127,7 @@ func Launch(opt Options) (*Sqinn, error) {
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
-	return &Sqinn{tempname, cmd, sync.Mutex{}, writer, reader}, nil
+	return &Sqinn{tempdir, cmd, sync.Mutex{}, writer, reader}, nil
 }
 
 // MustLaunch is the same as Launch except it panics on error.
@@ -379,8 +356,8 @@ func (sq *Sqinn) Close() error {
 	if err := sq.cmd.Wait(); err != nil {
 		return fmt.Errorf("Close: %w", err)
 	}
-	if sq.tempname != "" {
-		os.Remove(sq.tempname)
+	if sq.tempdir != "" {
+		os.RemoveAll(sq.tempdir)
 	}
 	return nil
 }

@@ -72,10 +72,10 @@ For usage examples, see `examples` directory.
 Building
 ------------------------------------------------------------------------------
 
-The library uses a pre-built embedded build of sqinn for Linux/amd64 and
-Windows/amd64.
+The library includes a prebuilt embedded build of sqinn for linux_amd64 and
+windows_amd64.
 
-If you do not want to use a pre-built sqinn binary, you can compile sqinn
+If you do not want to use a prebuilt sqinn binary, you can compile sqinn
 yourself. See <https://github.com/cvilsmeier/sqinn> for instructions.
 You must then specify the path to sqinn like so:
 
@@ -180,6 +180,11 @@ might occur. The PRAGMA busy_timeout might help to avoid SQLITE_BUSY errors.
 
 Changelog
 ------------------------------------------------------------------------------
+
+### v2.1.0-dev
+
+- better prebuilts (gzip and use bulid constraints)
+
 
 ### v2.0.1
 
