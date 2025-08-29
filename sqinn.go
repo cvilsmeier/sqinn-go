@@ -140,6 +140,7 @@ func MustLaunch(opt Options) *Sqinn {
 // Iteration is the iteration index, starting at 0.
 // Params is a slice that holds parameter values for this iteration,
 // and must be set by the function body.
+// Within a ProduceFunc, no calls to sqinn.Exec/Query are allowed.
 type ProduceFunc func(iteration int, params []Value)
 
 // Exec executes a SQL statement, possibly multiple times.
@@ -235,9 +236,11 @@ func (sq *Sqinn) MustExecSql(sql string) {
 	must(0, sq.ExecSql(sql))
 }
 
-// ConsumeFunc is a callback function that is called by Query once for each result row.
+// ConsumeFunc is a callback function that is called by Query once for each
+// result row.
 // Row is the row index, starting at 0.
 // Values contains the row values for this row.
+// Within a ConsumeFunc, no calls to sqinn.Exec/Query are allowed.
 type ConsumeFunc func(row int, values []Value)
 
 // Query executes a SQL statement and fetches the result rows.

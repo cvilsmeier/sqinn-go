@@ -15,3 +15,10 @@ To update them, do this:
     cat ~/Downloads/dist-windows-amd64/sqinn.exe | gzip > windows-amd64.gz
 
 That's it.
+
+Each prebuilt sqinn binary was built by a github runner supported by github.com.
+If you do not trust github.com (or whatever company owns github.com at the moment),
+you can always build sqinn yourself and use that.
+
+Also, if you need sqinn for a platform that is not officially supported by github.com,
+e.g. arm32, you have to build sqinn yourself and use that.
