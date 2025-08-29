@@ -181,6 +181,11 @@ might occur. The PRAGMA busy_timeout might help to avoid SQLITE_BUSY errors.
 Changelog
 ------------------------------------------------------------------------------
 
+### v2.1.x-dev
+
+- include prebuilts for macos amd64/arm64
+
+
 ### v2.1.0
 
 - bind and scan functions for converting go types to sqinn values and back

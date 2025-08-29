@@ -19,7 +19,11 @@ func Extract() (_dirname string, _filename string, _err error) {
 	if err != nil {
 		return "", "", err
 	}
-	tempname := filepath.Join(tempdir, sqinnName)
+	exeName := "sqinn"
+	if runtime.GOOS == "windows" {
+		exeName = "sqinn.exe"
+	}
+	tempname := filepath.Join(tempdir, exeName)
 	gr, err := gzip.NewReader(bytes.NewReader(gzipData))
 	if err != nil {
 		os.RemoveAll(tempdir)

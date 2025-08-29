@@ -8,11 +8,15 @@ To update them, do this:
 
 - Download latest sqinn builds from https://github.com/cvilsmeier/sqinn/releases
 
-- Extract dist-*.zip archives (e.g. in Downloads directory)
-    
-    cd prebuilt
-    cat ~/Downloads/dist-linux-amd64/sqinn       | gzip > linux-amd64.gz
-    cat ~/Downloads/dist-windows-amd64/sqinn.exe | gzip > windows-amd64.gz
+- Extract `dist-*.zip` archives (e.g. in `Downloads/` directory)
+
+~~~    
+cd prebuilt
+cat ~/Downloads/dist-linux-amd64/sqinn       | gzip > linux-amd64.gz
+cat ~/Downloads/dist-windows-amd64/sqinn.exe | gzip > windows-amd64.gz
+cat ~/Downloads/dist-darwin-amd64/sqinn      | gzip > darwin-amd64.gz
+cat ~/Downloads/dist-darwin-arm64/sqinn      | gzip > darwin-arm64.gz
+~~~
 
 That's it.
 
