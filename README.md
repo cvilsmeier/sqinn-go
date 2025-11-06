@@ -181,9 +181,9 @@ might occur. The PRAGMA busy_timeout might help to avoid SQLITE_BUSY errors.
 Changelog
 ------------------------------------------------------------------------------
 
-### v2.1.x-dev
+### v2.1.1
 
-- include prebuilts for macos amd64/arm64
+- update prebuilt sqinn v2.0.1
 
 
 ### v2.1.0
