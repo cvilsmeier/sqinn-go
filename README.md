@@ -181,6 +181,11 @@ might occur. The PRAGMA busy_timeout might help to avoid SQLITE_BUSY errors.
 Changelog
 ------------------------------------------------------------------------------
 
+### v2.1.2
+
+- update prebuilt sqinn v2.0.2
+
+
 ### v2.1.1
 
 - update prebuilt sqinn v2.0.1
