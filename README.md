@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/cvilsmeier/sqinn-go)](https://goreportcard.com/report/github.com/cvilsmeier/sqinn-go)
 [![Build Status](https://github.com/cvilsmeier/sqinn-go/actions/workflows/linux.yml/badge.svg)](https://github.com/cvilsmeier/sqinn-go/actions/workflows/linux.yml)
 [![Build Status](https://github.com/cvilsmeier/sqinn-go/actions/workflows/windows.yml/badge.svg)](https://github.com/cvilsmeier/sqinn-go/actions/workflows/windows.yml)
-[![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](http://unlicense.org/)
+[![License: Unlicense](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
 [![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 
 Sqinn-Go is a Go (Golang) library for accessing SQLite databases without cgo.
@@ -181,41 +181,39 @@ might occur. The PRAGMA busy_timeout might help to avoid SQLITE_BUSY errors.
 Changelog
 ------------------------------------------------------------------------------
 
+### v2.1.4
+
+- update prebuilt sqinn v2.0.4
+- changed license from Unlicense to MIT
+
 ### v2.1.3
 
-- update prebuilt sqinn v2.0.3 (for SQLite Version 3.51.3)
-
+- update prebuilt sqinn v2.0.3
 
 ### v2.1.2
 
 - update prebuilt sqinn v2.0.2
 
-
 ### v2.1.1
 
 - update prebuilt sqinn v2.0.1
-
 
 ### v2.1.0
 
 - bind and scan functions for converting go types to sqinn values and back
 
-
 ### v2.0.2
 
 - better prebuilts (gzip and build constraints)
-
 
 ### v2.0.1
 
 - ValXy const is now byte (was untyped)
 
-
 ### v2.0.0
 
 - Major Version 2 (streaming protocol, less memory, faster)
 - Include prebuilt sqinn v2.0.0 (SQLite v3.50.4 (2025-07-30))
-
 
 ### v1.2.0 (2023-10-05)
 
@@ -226,11 +224,9 @@ Changelog
 - Updated min. go version 1.19
 - Updated samples
 
-
 ### v1.1.2 (2021-05-27)
 
 - Fixed negative int32 marshalling
-
 
 ### v1.1.1 (2021-03-27)
 
@@ -238,11 +234,9 @@ Changelog
 - Added example for handling NULL values
 - Added example for sqlite specialties
 
-
 ### v1.1.0 (2020-06-14)
 
 - Use IEEE 745 encoding for float64 values, needs sqinn v1.1.0 or higher.
-
 
 ### v1.0.0 (2020-06-10)
 

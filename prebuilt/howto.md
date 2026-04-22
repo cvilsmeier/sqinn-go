@@ -10,14 +10,19 @@ Currently it embeds sqinn for the following platforms:
 
 To update them, do this:
 
-- Download latest sqinn builds from https://github.com/cvilsmeier/sqinn/releases
+Download latest sqinn builds from https://github.com/cvilsmeier/sqinn/releases
+into `Downloads/` directory.
 
-- Extract `dist-*.zip` archives (e.g. in `Downloads/` directory)
+~~~
+cd ~/Downloads
+unzip dist-darwin-amd64.zip   -d dist-darwin-amd64
+unzip dist-darwin-arm64.zip   -d dist-darwin-arm64
+unzip dist-linux-amd64.zip    -d dist-linux-amd64
+unzip dist-windows-amd64.zip  -d dist-windows-amd64
+~~~
 
-- Compress sqinn binaries with the following command
-
-~~~    
-cd prebuilt
+~~~
+cd /path/to/sqinn-go/src/prebuilt
 cat ~/Downloads/dist-linux-amd64/sqinn       | gzip > linux-amd64.gz
 cat ~/Downloads/dist-windows-amd64/sqinn.exe | gzip > windows-amd64.gz
 cat ~/Downloads/dist-darwin-amd64/sqinn      | gzip > darwin-amd64.gz
