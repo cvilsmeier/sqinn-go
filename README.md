@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/cvilsmeier/sqinn-go)](https://goreportcard.com/report/github.com/cvilsmeier/sqinn-go)
 [![Build Status](https://github.com/cvilsmeier/sqinn-go/actions/workflows/linux.yml/badge.svg)](https://github.com/cvilsmeier/sqinn-go/actions/workflows/linux.yml)
 [![Build Status](https://github.com/cvilsmeier/sqinn-go/actions/workflows/windows.yml/badge.svg)](https://github.com/cvilsmeier/sqinn-go/actions/workflows/windows.yml)
-[![License: Unlicense](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
 [![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 
 Sqinn-Go is a Go (Golang) library for accessing SQLite databases without cgo.
