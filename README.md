@@ -181,6 +181,11 @@ might occur. The PRAGMA busy_timeout might help to avoid SQLITE_BUSY errors.
 Changelog
 ------------------------------------------------------------------------------
 
+### v2.1.7
+
+- update prebuilt sqinn v2.0.7 for empty blob bugfix
+- min go version is 1.25
+
 ### v2.1.6
 
 - update prebuilt sqinn v2.0.6
