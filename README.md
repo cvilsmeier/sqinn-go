@@ -181,6 +181,10 @@ might occur. The PRAGMA busy_timeout might help to avoid SQLITE_BUSY errors.
 Changelog
 ------------------------------------------------------------------------------
 
+### v2.1.9
+
+- fix ownership of decoded blob results (thanks @dajiaohuang)
+
 ### v2.1.8
 
 - update prebuilt sqinn v2.0.8

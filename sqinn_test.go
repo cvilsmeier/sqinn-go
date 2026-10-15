@@ -233,6 +233,33 @@ func TestSqinn(t *testing.T) {
 	isErr(t, err, "sqinn: column index out of range")
 }
 
+func TestSqinnQueryBlobs(t *testing.T) {
+	sq := MustLaunch(Options{})
+	t.Cleanup(func() {
+		isNoErr(t, sq.Close())
+	})
+	sq.MustExecSql("CREATE TABLE blobs (id INTEGER PRIMARY KEY, b BLOB)")
+	for _, size := range []int{1, 4, 8, 9} {
+		firstData := bytes.Repeat([]byte{byte(0x40 + size)}, size)
+		secondData := bytes.Repeat([]byte{byte(0x50 + size)}, size)
+		sq.MustExecSql("DELETE FROM blobs")
+		sq.MustExecParams("INSERT INTO blobs VALUES (?, ?)", 2, 2, []Value{
+			Int32Value(1), BlobValue(firstData),
+			Int32Value(2), BlobValue(secondData),
+		})
+		rows := sq.MustQueryRows("SELECT b, id FROM blobs ORDER BY id", nil, []byte{ValBlob, ValInt32})
+		firstBlob := rows[0][0].Blob
+		secondBlob := rows[1][0].Blob
+		if !bytes.Equal(firstBlob, firstData) || !bytes.Equal(secondBlob, secondData) {
+			t.Errorf("size %d: got blobs %x, %x; want %x, %x", size, firstBlob, secondBlob, firstData, secondData)
+		}
+		sq.MustQueryRows("SELECT 123456789", nil, []byte{ValInt64})
+		if !bytes.Equal(firstBlob, firstData) || !bytes.Equal(secondBlob, secondData) {
+			t.Errorf("size %d: later query changed retained blobs to %x, %x", size, firstBlob, secondBlob)
+		}
+	}
+}
+
 func TestSqinnLog(t *testing.T) {
 	opt := Options{
 		Sqinn:    "", // prebuilt
@@ -1117,6 +1144,69 @@ func BenchmarkQueryUsers(b *testing.B) {
 				if id != irow+1 {
 					b.Fatal("wrong id")
 				}
+			}
+			sq.MustExecSql("COMMIT")
+		}
+	})
+}
+
+func BenchmarkQueryBlobs(b *testing.B) {
+	b.Run("Query", func(b *testing.B) {
+		dbfile := filepath.Join(b.TempDir(), "test.db")
+		// launch sqinn
+		sq := MustLaunch(Options{
+			Db:       dbfile,
+			Loglevel: 0,
+			Log:      nil, // func(msg string) { b.Logf("SQINN: %s", msg) },
+		})
+		b.Cleanup(func() {
+			if err := sq.Close(); err != nil {
+				b.Fatal(err)
+			}
+		})
+		sq.MustExecSql("PRAGMA foreign_keys=1")
+		sq.MustExecSql("CREATE TABLE images (id INTEGER NOT NULL PRIMARY KEY, data BLOB NOT NULL)")
+		// Insert blobs of size 1, 2, 4, 8, 16, ..., 16K, 32K.
+		// Insert 100 blobs for each size.
+		blobsizes := []int{
+			1, 2, 4, 8, 16, 32, 64, 128, 256,
+			1 * 1024, 2 * 1024, 4 * 1024, 8 * 1024, 16 * 1024, 32 * 1024,
+		}
+		const nblobsPerSize = 100
+		var params []Value
+		var niterations int
+		for blobsize := range blobsizes {
+			for range nblobsPerSize {
+				niterations++
+				data := bytes.Repeat([]byte{0x42}, blobsize)
+				params = append(params, Int32Value(niterations), BlobValue(data))
+			}
+		}
+		sq.MustExecSql("BEGIN IMMEDIATE")
+		sq.MustExecParams("INSERT INTO images(id,data) VALUES(?,?)", niterations, 2, params)
+		sq.MustExecSql("COMMIT")
+		// benchmark: query all blobs
+		for b.Loop() {
+			sq.MustExecSql("BEGIN IMMEDIATE")
+			var nrows int
+			err := sq.Query("SELECT id,data FROM images ORDER BY id", nil, []byte{ValInt32, ValBlob}, func(row int, values []Value) {
+				nrows++
+				if len(values) != 2 {
+					b.Fatal("wrong len(values)")
+				}
+				id := values[0].Int32
+				if id != nrows {
+					b.Fatalf("wrong id: want %d, have %d", nrows, id)
+				}
+			})
+			if err != nil {
+				b.Fatal(err)
+			}
+			if nrows != nblobsPerSize*len(blobsizes) {
+				b.Fatalf("wrong rowCount: want %d, have %d", nblobsPerSize*len(blobsizes), nrows)
+			}
+			if nrows != niterations {
+				b.Fatalf("wrong rowCount: want %d, have %d", niterations, nrows)
 			}
 			sq.MustExecSql("COMMIT")
 		}
