@@ -742,7 +742,8 @@ func (x *reader) readBlob() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return buf, nil
+	// Blob results must outlive subsequent reads, which reuse the reader's buffers.
+	return bytes.Clone(buf), nil
 }
 
 // encode / decode
